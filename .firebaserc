@@ -1,0 +1,17 @@
+{
+  "projects": {
+    "default": "leilaoouro",
+    "leilaoouro": "leilaoouro",
+    "prod": "leilaoouro"
+  },
+  "targets": {
+    "leilaoouro": {
+      "hosting": {
+        "leilaoouro": [
+          "leilaoouro"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

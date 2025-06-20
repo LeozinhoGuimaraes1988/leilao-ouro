@@ -1,0 +1,25 @@
+.uploadWrapper {
+  display: flex;
+  justify-content: flex-start;
+  padding-left: 1rem; /* Alinha com a tabela (que tem padding lateral) */
+  margin-bottom: 1rem;
+}
+
+.uploadButton {
+  background-color: #204a94;
+  margin-bottom: 10px;
+  color: white;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  text-align: center;
+  font-size: 1rem;
+  border: none;
+  width: auto;
+}
+
+.uploadButton:hover {
+  background-color: #0063cd;
+}
