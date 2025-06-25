@@ -3,9 +3,10 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 
 // Apenas carrega .env localmente (não afeta deploy)
-if (process.env.NODE_ENV !== 'production') {
-  dotenv.config();
-}
+// if (process.env.NODE_ENV !== 'production') {
+//   dotenv.config();
+// }
+dotenv.config();
 
 import testFirestoreRoutes from './routes/testFirestore.js';
 import cotacaoRoutes from './routes/cotacaoRoute.js';
@@ -34,9 +35,9 @@ app.get('/status', (req, res) => {
 
 // 🔥 NUNCA usar app.listen() no Firebase Functions
 // export apenas o app
-// const PORT = process.env.PORT || 3000;
-// app.listen(PORT, () => {
-//   console.log(`🚀 Servidor rodando na porta ${PORT}`);
-// });
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+});
 
 export default app;

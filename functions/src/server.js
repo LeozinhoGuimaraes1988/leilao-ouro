@@ -27,22 +27,24 @@ app.use(
 
 // 🔧 CORREÇÃO: NÃO usar express.json() para multipart
 // Deixar o multer handle completamente o multipart/form-data
-app.use((req, res, next) => {
-  const contentType = req.headers['content-type'];
+// app.use((req, res, next) => {
+//   const contentType = req.headers['content-type'];
 
-  // Se for multipart/form-data, PULA TODOS os middlewares de parsing
-  if (contentType && contentType.startsWith('multipart/form-data')) {
-    console.log('📁 Detectado multipart/form-data - pulando parsing');
-    return next();
-  }
+//   // Se for multipart/form-data, PULA TODOS os middlewares de parsing
+//   if (contentType && contentType.startsWith('multipart/form-data')) {
+//     console.log('📁 Detectado multipart/form-data - pulando parsing');
+//     return next();
+//   }
 
-  // Apenas para JSON
-  if (contentType && contentType.includes('application/json')) {
-    express.json({ limit: '50mb' })(req, res, next);
-  } else {
-    next();
-  }
-});
+//   // Apenas para JSON
+//   if (contentType && contentType.includes('application/json')) {
+//     express.json({ limit: '50mb' })(req, res, next);
+//   } else {
+//     next();
+//   }
+// });
+
+app.use(express.json({ limit: '50mb' }));
 
 // Middleware adicional para debugging de uploads
 app.use('/pdf', (req, res, next) => {
