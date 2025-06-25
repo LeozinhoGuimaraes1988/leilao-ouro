@@ -29,7 +29,7 @@ app.use('/api/test-firestore', testFirestoreRoutes);
 app.use('/api', cotacaoRoutes);
 app.use('/api', importPdfRouter);
 
-app.get('/status', (req, res) => {
+app.get('/api/status', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'API funcionando! 🚀' });
 });
 
