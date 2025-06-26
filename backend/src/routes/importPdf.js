@@ -3,6 +3,7 @@ import multer from 'multer';
 import admin from 'firebase-admin';
 import { salvarLotes } from '../services/firebaseService.js';
 import dotenv from 'dotenv';
+import pdf from 'pdf-parse'; // ✅ Importação correta
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ const upload = multer({
 router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
   console.log('📎 Requisição recebida em /importar-pdf');
   console.log('📥 Headers recebidos:', req.headers);
+
   if (!req.file) {
     console.error('❌ Nenhum arquivo foi enviado.');
     return res.status(400).json({
@@ -24,7 +26,6 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
   }
 
   try {
-    const pdf = (await import('pdf-parse')).default;
     const buffer = req.file.buffer;
 
     console.log('🔍 Extraindo conteúdo do PDF...');
@@ -95,20 +96,3 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
     });
   }
 });
-
-router.get('/lotes', async (req, res) => {
-  try {
-    const snapshot = await admin.firestore().collection('lotes').get();
-    const lotes = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-
-    res.json({ sucesso: true, total: lotes.length, lotes });
-  } catch (error) {
-    console.error('Erro ao buscar lotes:', error);
-    res.status(500).json({ erro: 'Erro ao buscar lotes' });
-  }
-});
-
-export default router;
