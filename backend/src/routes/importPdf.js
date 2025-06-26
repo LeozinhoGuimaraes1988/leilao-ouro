@@ -16,6 +16,8 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
   console.log('📎 Requisição recebida em /importar-pdf');
   console.log('📥 Headers recebidos:', req.headers);
   if (!req.file) {
+    console.log('🧪 req.file:', req.file);
+    console.log('🧪 req.body:', req.body);
     console.error('❌ Nenhum arquivo foi enviado.');
     return res.status(400).json({
       sucesso: false,
