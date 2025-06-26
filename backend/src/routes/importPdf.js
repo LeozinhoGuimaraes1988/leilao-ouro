@@ -96,3 +96,5 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
     });
   }
 });
+
+export default router;
