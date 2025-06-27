@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "github:iamh2o/pdf-parse#1.1.3"
   }
 }
