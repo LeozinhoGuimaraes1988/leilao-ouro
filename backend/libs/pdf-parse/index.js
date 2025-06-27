@@ -1,4 +1,4 @@
-import pdfParse from 'pdf-parse';
+// import pdfParse from 'pdf-parse';
 
 export default async function extrairTextoPdf(buffer) {
   const result = await pdfParse(buffer);
