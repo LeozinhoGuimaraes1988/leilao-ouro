@@ -3,6 +3,8 @@ import multer from 'multer';
 import admin from 'firebase-admin';
 import { salvarLotes } from '../services/firebaseService.js';
 import dotenv from 'dotenv';
+import path from 'path';
+import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
 
 dotenv.config();
 
@@ -12,12 +14,19 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
+// Configura o worker para Node.js
+GlobalWorkerOptions.workerSrc = path.join(
+  path.dirname(require.resolve('pdfjs-dist/package.json')),
+  'build/pdf.worker.js'
+);
+
 router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
   console.log('📎 Requisição recebida em /importar-pdf');
   console.log('📥 Headers recebidos:', req.headers);
+  console.log('🧪 req.file:', req.file);
+  console.log('🧪 req.body:', req.body);
+
   if (!req.file) {
-    console.log('🧪 req.file:', req.file);
-    console.log('🧪 req.body:', req.body);
     console.error('❌ Nenhum arquivo foi enviado.');
     return res.status(400).json({
       sucesso: false,
@@ -26,12 +35,19 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
   }
 
   try {
-    const pdf = (await import('pdf-parse')).default;
-    const buffer = req.file.buffer;
+    const pdfBuffer = req.file.buffer;
 
-    console.log('🔍 Extraindo conteúdo do PDF...');
-    const data = await pdf(buffer);
-    const texto = data.text;
+    console.log('🔍 Extraindo conteúdo do PDF com pdfjs-dist...');
+    const loadingTask = getDocument({ data: pdfBuffer });
+    const pdf = await loadingTask.promise;
+
+    let texto = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map((item) => item.str).join(' ');
+      texto += pageText + '\n';
+    }
 
     if (!texto || texto.trim().length === 0) {
       return res.status(400).json({
@@ -90,7 +106,7 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
 
     res.json({ sucesso: true, totalInseridos: lotes.length });
   } catch (error) {
-    console.error('❌ Erro ao processar o PDF com pdf-parse:', error);
+    console.error('❌ Erro ao processar o PDF com pdfjs-dist:', error);
     res.status(500).json({
       sucesso: false,
       erro: `Erro ao processar o PDF: ${error.message}`,
