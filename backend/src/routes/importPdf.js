@@ -3,7 +3,8 @@ import multer from 'multer';
 import admin from 'firebase-admin';
 import { salvarLotes } from '../services/firebaseService.js';
 import dotenv from 'dotenv';
-import pdf from '../../libs/pdf-parse/index.js';
+import extrairTextoPdf from '../../libs/pdf-parse/index.js';
+
 dotenv.config();
 
 const router = express.Router();
@@ -17,6 +18,7 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
   console.log('📥 Headers recebidos:', req.headers);
   console.log('🧪 req.file:', req.file);
   console.log('🧪 req.body:', req.body);
+
   if (!req.file) {
     console.error('❌ Nenhum arquivo foi enviado.');
     return res.status(400).json({
@@ -29,8 +31,7 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
     const buffer = req.file.buffer;
 
     console.log('🔍 Extraindo conteúdo do PDF...');
-    const data = await pdf(buffer);
-    const texto = data.text;
+    const texto = await extrairTextoPdf(buffer);
 
     if (!texto || texto.trim().length === 0) {
       return res.status(400).json({
@@ -41,6 +42,7 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
 
     const regex =
       /(?<lote>0\d{3}\.\d{6,}-\d)[\s\S]*?(?<descricao>.+?)\s+R\$ ?(?<valor>[\d.]+,[\d]{2})/gs;
+
     const lotes = [];
     const limiteImportacao = Infinity;
 
@@ -89,7 +91,7 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
 
     res.json({ sucesso: true, totalInseridos: lotes.length });
   } catch (error) {
-    console.error('❌ Erro ao processar o PDF com pdf-parse:', error);
+    console.error('❌ Erro ao processar o PDF:', error);
     res.status(500).json({
       sucesso: false,
       erro: `Erro ao processar o PDF: ${error.message}`,

@@ -1,10 +1,6 @@
-import fs from 'fs';
-import defaultParser from './pdf.js';
+import pdfParse from 'pdf-parse';
 
-export default function pdf(dataBuffer, options = {}) {
-  return defaultParser(dataBuffer, options);
+export default async function extrairTextoPdf(buffer) {
+  const result = await pdfParse(buffer);
+  return result.text;
 }
-
-pdf.fs = {
-  readFileSync: fs.readFileSync,
-};
