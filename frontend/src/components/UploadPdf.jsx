@@ -5,7 +5,7 @@ const isLocalhost = window.location.hostname === 'localhost';
 
 const API_BASE = isLocalhost
   ? 'http://localhost:3001/api' // Desenvolvimento local
-  : '/api'; // Produção (Firebase Hosting + Functions)
+  : 'https://leilao-ouro.onrender.com/api';
 
 const UploadPdf = ({ onUploadSuccess }) => {
   const handleFileChange = async (e) => {

@@ -10,7 +10,7 @@ import { db } from '../firebase/config.js';
 
 // 🔁 Função para buscar lotes paginados
 export const getLotesPaginados = async (
-  limitePorPagina = 10,
+  limitePorPagina = 5,
   ultimoDoc = null
 ) => {
   try {
@@ -21,16 +21,12 @@ export const getLotesPaginados = async (
     if (ultimoDoc) {
       queryLotes = query(
         lotesRef,
-        orderBy('numeroLote'),
+        orderBy('criadoEm'),
         startAfter(ultimoDoc),
         limit(limitePorPagina)
       );
     } else {
-      queryLotes = query(
-        lotesRef,
-        orderBy('numeroLote'),
-        limit(limitePorPagina)
-      );
+      queryLotes = query(lotesRef, orderBy('criadoEm'), limit(limitePorPagina));
     }
 
     const snapshot = await getDocs(queryLotes);

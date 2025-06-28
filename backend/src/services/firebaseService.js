@@ -57,3 +57,21 @@ export async function salvarLotes(loteData) {
 
   await batch.commit();
 }
+
+// export async function salvarLotes(loteData) {
+//   const ref = db.collection('lotes');
+//   const batchSize = 500;
+
+//   for (let i = 0; i < loteData.length; i += batchSize) {
+//     const batch = db.batch();
+//     const grupo = loteData.slice(i, i + batchSize);
+
+//     grupo.forEach((item) => {
+//       const docRef = ref.doc(); // Cria um novo documento com ID automático
+//       batch.set(docRef, item);
+//     });
+
+//     await batch.commit(); // Salva esse grupo de até 500
+//     console.log(`✅ Batch ${i / batchSize + 1} salvo com ${grupo.length} documentos`);
+//   }
+// }
