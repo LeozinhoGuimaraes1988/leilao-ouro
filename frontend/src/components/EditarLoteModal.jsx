@@ -2,54 +2,78 @@ import React, { useState, useEffect } from 'react';
 import styles from './EditarLoteModal.module.css';
 
 const EditarLoteModal = ({ lote, onClose, onSave }) => {
-  const [form, setForm] = useState(lote);
+  const [form, setForm] = useState(null); // começa nulo pra evitar flicker
 
+  // Preenche só UMA vez quando o modal abre
   useEffect(() => {
-    if (lote) {
-      const pesoReal =
-        parseFloat(lote.pesoLote) - parseFloat(lote.descontoPesoPedra || 0);
-      const cotacaoBase = parseFloat(lote.cotacaoBase || 0);
-      const lanceCalculado = cotacaoBase * pesoReal;
+    if (!lote) return;
 
-      setForm({
-        ...lote,
-        lance:
-          Number.isNaN(lote.lance) || lote.lance === 0
-            ? lanceCalculado
-            : lote.lance,
-      });
-    }
-  }, [lote]);
+    const pesoReal =
+      parseFloat(lote.pesoLote ?? 0) - parseFloat(lote.descontoPesoPedra ?? 0);
+    const cotacaoBase = parseFloat(lote.cotacaoBase ?? 0);
+    const lanceCalculado = cotacaoBase * (isNaN(pesoReal) ? 0 : pesoReal);
+
+    setForm({
+      ...lote,
+      // se não houver lance ou for 0, sugere o calculado; senão mantém o existente
+      lance:
+        lote.lance === undefined ||
+        lote.lance === null ||
+        Number(lote.lance) === 0
+          ? lanceCalculado
+          : Number(lote.lance),
+      pesoLote: Number(lote.pesoLote ?? 0),
+      descontoPesoPedra: Number(lote.descontoPesoPedra ?? 0),
+      percentualExtra: Number(lote.percentualExtra ?? 6),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // roda só ao montar
+
+  if (!lote || !form) return null;
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    // converte para número quando o input é number
+    const parsed =
+      type === 'number' ? (value === '' ? '' : Number(value)) : value;
+    setForm((prev) => ({ ...prev, [name]: parsed }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave({
-      ...form,
-      lance: parseFloat(form.lance),
-      pesoLote: parseFloat(form.pesoLote),
-      descontoPesoPedra: parseFloat(form.descontoPesoPedra),
-      percentualExtra: parseFloat(form.percentualExtra || 6),
-    });
-    onClose();
-  };
 
-  if (!lote) return null;
+    const toNum = (v, def = 0) => {
+      if (v === '' || v === null || v === undefined) return def;
+      const n = Number(String(v).replace(',', '.'));
+      return Number.isNaN(n) ? def : n;
+    };
+
+    const payload = {
+      ...form,
+      id: form.id ?? lote.id,
+      lance: toNum(form.lance, 0), // aceita 0
+      pesoLote: toNum(form.pesoLote, 0),
+      descontoPesoPedra: toNum(form.descontoPesoPedra, 0),
+      percentualExtra: toNum(form.percentualExtra ?? 6, 6),
+    };
+
+    await onSave(payload); // <<< aguarde o PUT
+    onClose(); // <<< feche depois
+  };
 
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
         <h2>Editar Lote #{lote.numeroLote}</h2>
+
         <form onSubmit={handleSubmit}>
           <div className={styles.floatingGroup}>
             <input
               id="lance"
               name="lance"
-              value={form.lance}
+              type="number"
+              step="0.01"
+              value={form.lance === '' ? '' : form.lance}
               onChange={handleChange}
               placeholder=" "
               required
@@ -61,7 +85,9 @@ const EditarLoteModal = ({ lote, onClose, onSave }) => {
             <input
               id="pesoLote"
               name="pesoLote"
-              value={form.pesoLote}
+              type="number"
+              step="0.01"
+              value={form.pesoLote === '' ? '' : form.pesoLote}
               onChange={handleChange}
               placeholder=" "
               required
@@ -73,17 +99,35 @@ const EditarLoteModal = ({ lote, onClose, onSave }) => {
             <input
               id="descontoPesoPedra"
               name="descontoPesoPedra"
-              value={form.descontoPesoPedra}
+              type="number"
+              step="0.01"
+              value={
+                form.descontoPesoPedra === '' ? '' : form.descontoPesoPedra
+              }
               onChange={handleChange}
               placeholder=" "
               required
             />
             <label htmlFor="descontoPesoPedra">Desconto Peso Pedra</label>
           </div>
+
+          {/* opcional: manter o percentualExtra visível/ajustável */}
+          {/* <div className={styles.floatingGroup}>
+            <input
+              id="percentualExtra"
+              name="percentualExtra"
+              type="number"
+              step="0.01"
+              value={form.percentualExtra === '' ? '' : form.percentualExtra}
+              onChange={handleChange}
+              placeholder=" "
+            />
+            <label htmlFor="percentualExtra">Percentual Extra (%)</label>
+          </div> */}
+
           <button type="submit" className={styles.salvar}>
             Salvar
           </button>
-
           <button type="button" onClick={onClose} className={styles.cancelBtn}>
             Cancelar
           </button>

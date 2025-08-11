@@ -17,30 +17,36 @@ const Home = () => {
   const [lotes, setLotes] = useState([]);
   const [modalLote, setModalLote] = useState(null);
 
-  const deletarLote = async (id) => {
-    try {
-      await axios.delete(`${API_BASE}/lotes/${id}`);
-      setLotes((prev) => prev.filter((l) => l.id !== id));
-    } catch (error) {
-      console.error('Erro ao excluir lote:', error);
-    }
-  };
+  // const deletarLote = async (id) => {
+  //   try {
+  //     await axios.delete(`${API_BASE}/lotes/${id}`);
+  //     setLotes((prev) => prev.filter((l) => l.id !== id));
+  //   } catch (error) {
+  //     console.error('Erro ao excluir lote:', error);
+  //   }
+  // };
 
   const editarLote = (lote) => setModalLote(lote);
-
   const salvarEdicao = async (dadosAtualizados) => {
     try {
-      const res = await axios.put(
-        `${API_BASE}/lotes/${modalLote.id}`,
-        dadosAtualizados
-      );
+      const id = dadosAtualizados.id ?? modalLote.id;
+
+      console.log('[payload PUT]', dadosAtualizados); // <-- LOGA ANTES
+
+      const res = await axios.put(`${API_BASE}/lotes/${id}`, dadosAtualizados);
+
+      console.log('[res PUT]', res.data); // <-- LOGA DEPOIS
+
       setLotes((prev) =>
         prev.map((l) =>
-          l.id === modalLote.id ? { ...l, ...res.data.loteAtualizado } : l
+          l.id === id ? { ...l, ...res.data.loteAtualizado } : l
         )
       );
+
+      return res.data.loteAtualizado;
     } catch (err) {
       console.error('Erro ao editar lote:', err);
+      throw err;
     }
   };
 
@@ -65,7 +71,7 @@ const Home = () => {
         <LoteTable
           lotes={lotes}
           setLotes={setLotes}
-          onDelete={deletarLote}
+          // onDelete={deletarLote}
           onEdit={editarLote}
         />
       </div>

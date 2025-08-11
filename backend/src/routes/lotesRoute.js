@@ -105,6 +105,25 @@ router.get('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Busca o documento atual para usar como base
+    const ref = db.collection('lotes').doc(id);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      return res
+        .status(404)
+        .json({ sucesso: false, erro: 'Lote não encontrado' });
+    }
+    const atual = snap.data();
+
+    // helper: aceita vírgula e 0, e permite default do valor atual
+    const toNum = (v, fallback) => {
+      if (v === undefined || v === null || v === '') return fallback;
+      const n = Number(String(v).replace(',', '.'));
+      return Number.isNaN(n) ? fallback : n;
+    };
+
+    // Body (alguns podem não vir do modal)
     const {
       numeroLote,
       classificacao,
@@ -114,40 +133,52 @@ router.put('/:id', async (req, res) => {
       pesoLote,
     } = req.body;
 
+    // Mescla preservando os valores atuais quando não enviados
+    const merged = {
+      numeroLote: numeroLote ?? atual.numeroLote,
+      classificacao: classificacao ?? atual.classificacao,
+      lance: toNum(lance, toNum(atual.lance, 0)), // aceita 0
+      percentualExtra: toNum(percentualExtra, toNum(atual.percentualExtra, 6)),
+      descontoPesoPedra: toNum(
+        descontoPesoPedra,
+        toNum(atual.descontoPesoPedra, 0)
+      ),
+      pesoLote: toNum(pesoLote, toNum(atual.pesoLote, 0)),
+    };
+
+    // Cotação
     const configDoc = await db
       .collection('configuracoes')
       .doc('percentuais')
       .get();
     const { modoCotacao, cotacaoManual } = configDoc.data();
     const cotacaoBase =
-      modoCotacao === 'manual' ? parseFloat(cotacaoManual) : 573.97;
+      modoCotacao === 'manual' ? Number(cotacaoManual) : 573.97;
 
-    const totalComPercentual = lance + lance * (percentualExtra / 100);
-    const pesoReal = pesoLote - descontoPesoPedra;
+    // Recalcula derivados
+    const pesoReal = merged.pesoLote - merged.descontoPesoPedra;
+    const totalComPercentual =
+      merged.lance + merged.lance * (merged.percentualExtra / 100);
     const valorFinalPorGrama = pesoReal > 0 ? totalComPercentual / pesoReal : 0;
-
     const estimativaGanho =
       cotacaoBase && pesoReal > 0
         ? cotacaoBase * pesoReal - totalComPercentual
-        : null;
+        : 0;
 
     const loteAtualizado = {
-      numeroLote,
-      classificacao,
-      lance,
-      percentualExtra,
-      totalComPercentual,
-      descontoPesoPedra,
-      pesoLote,
+      ...atual, // mantém quaisquer outros campos
+      ...merged,
       pesoReal,
+      totalComPercentual,
       valorFinalPorGrama,
       cotacaoBase,
       estimativaGanho,
-      atualizadoEm: new Date().toISOString(),
+      atualizadoEm: Timestamp.now(),
     };
 
-    await db.collection('lotes').doc(id).update(loteAtualizado);
-    res.json({ sucesso: true, id, loteAtualizado });
+    await ref.set(loteAtualizado, { merge: true });
+
+    return res.json({ sucesso: true, id, loteAtualizado });
   } catch (error) {
     console.error('Erro ao editar lote:', error);
     res.status(500).json({ sucesso: false, erro: error.message });

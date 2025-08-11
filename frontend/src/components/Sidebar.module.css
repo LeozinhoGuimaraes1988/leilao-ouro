@@ -1,9 +1,9 @@
-.sidebar {
+/* .sidebar {
   position: fixed;
   top: 0;
-  left: 0;
-  /* height: 100vh; */
-  background-color: #204a94;
+  left: 0; */
+/* height: 100vh; */
+/* background-color: #204a94;
   color: white;
   width: 40px;
   transition: width 0.3s ease;
@@ -13,15 +13,15 @@
   flex-direction: column;
   align-items: center;
   padding-top: 1rem;
-}
+} */
 
 /* 1º clique: ícones visíveis */
-.media {
+/* .media {
   width: 80px;
-}
+} */
 
 /* 2º clique: expandido com texto */
-.aberta {
+/* .aberta {
   width: 200px;
 }
 .aberta {
@@ -107,4 +107,70 @@
     font-size: 0.8rem;
     gap: 0.5rem;
   }
+} */
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 50px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  transition: width 0.3s ease;
+  z-index: 1000;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar.aberta {
+  width: 250px;
+}
+
+.toggleBtn {
+  width: 100%;
+  height: 60px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.toggleBtn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav {
+  padding-top: 20px;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  color: white;
+  text-decoration: none;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.link.active {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.icon {
+  min-width: 20px;
+  margin-right: 5px;
+  margin-left: -5px;
+}
+
+.sidebar:not(.aberta) .link span {
+  display: none;
 }

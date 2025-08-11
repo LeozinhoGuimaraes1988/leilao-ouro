@@ -1,5 +1,4 @@
 // src/components/LoteTableRow.jsx
-import React from 'react';
 import { useCalculoLote } from '../hooks/useCalculoLote';
 import styles from './LoteTable.module.css';
 
@@ -14,6 +13,8 @@ const LoteTableRow = ({
   setSelecionados,
   onDelete,
   onEdit,
+  onToggleVantajoso,
+  lotesVantajosos,
 }) => {
   const {
     valor,
@@ -27,11 +28,22 @@ const LoteTableRow = ({
   } = useCalculoLote(lote);
 
   const key = `${lote.id}-${lote.numeroLote}-${index}`;
+  const isVantajoso = lotesVantajosos.some((l) => l.id === lote.id);
 
   return (
     <tr key={key}>
+      {/* Lote */}
       <td>{lote.numeroLote}</td>
+
+      {/* Selecionar (para exclusão em massa) */}
+
+      {/* Número interno (ID) */}
+      {/* <td>{lote.id}</td> */}
+
+      {/* Descrição */}
       <td>{lote.descricao || '—'}</td>
+
+      {/* Classificação (select) */}
       <td>
         <select
           className={styles.select}
@@ -73,14 +85,22 @@ const LoteTableRow = ({
           </option>
         </select>
       </td>
+
+      {/* Valor, Lance, 6%, Total */}
       <td>R$ {valor.toFixed(2)}</td>
       <td>R$ {lance.toFixed(2)}</td>
       <td>R$ {seisPorcento.toFixed(2)}</td>
       <td>R$ {total.toFixed(2)}</td>
-      <td>{lote.descontoPesoPedra}g</td>
+
+      {/* Desconto, Pesos */}
+      <td>{lote.descontoPesoPedra || 0}g</td>
       <td>{pesoLote.toFixed(2)}g</td>
       <td>{pesoReal.toFixed(2)}g</td>
+
+      {/* Valor por grama */}
       <td>R$ {valorPorGrama.toFixed(2)}</td>
+
+      {/* Estimativa de Ganho */}
       <td
         style={{
           color:
@@ -90,6 +110,8 @@ const LoteTableRow = ({
       >
         R$ {ganhoEstimado.toFixed(2)}
       </td>
+
+      {/* Ações: Editar, Excluir, Adicionar ao carrinho */}
       <td>
         <div className={styles.actions}>
           <button className={styles.iconButton} onClick={() => onEdit(lote)}>
@@ -101,18 +123,32 @@ const LoteTableRow = ({
           >
             🗑️
           </button>
-          <input
-            type="checkbox"
-            checked={selecionados.includes(lote.id)}
-            onChange={(e) => {
-              if (e.target.checked) {
-                setSelecionados((prev) => [...prev, lote.id]);
-              } else {
-                setSelecionados((prev) => prev.filter((id) => id !== lote.id));
-              }
-            }}
-            className={styles.checkbox}
-          />
+          <button
+            className={styles.iconButton}
+            onClick={() => onToggleVantajoso(lote, !isVantajoso)}
+            title={
+              isVantajoso ? 'Remover do carrinho' : 'Adicionar ao carrinho'
+            }
+          >
+            {isVantajoso ? '🛒✅' : '🛒'}
+          </button>
+
+          {/* Checkbox fica como um ELEMENTO dentro do MESMO td (span) */}
+          <span>
+            <input
+              type="checkbox"
+              checked={selecionados.includes(lote.id)}
+              onChange={(e) => {
+                if (e.target.checked)
+                  setSelecionados((prev) => [...prev, lote.id]);
+                else
+                  setSelecionados((prev) =>
+                    prev.filter((id) => id !== lote.id)
+                  );
+              }}
+              className={styles.checkbox}
+            />
+          </span>
         </div>
       </td>
     </tr>

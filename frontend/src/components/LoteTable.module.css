@@ -1,232 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+.container {
+  font-family: 'Inter', sans-serif;
+  padding: 1rem;
+}
+
 .scrollWrapper {
+  max-height: 500px;
+  overflow-y: auto;
   overflow-x: auto;
+  margin-top: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  position: relative; /* 👈 necessário para sticky funcionar corretamente */
+}
+
+.table {
   width: 100%;
-}
-.header {
-  display: flex;
-  justify-content: center; /* ← CENTRALIZA */
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.uploadButton button {
-  justify-content: center;
-  cursor: pointer;
-  padding: auto;
-  display: flex;
-  align-items: center;
-  background-color: none;
-  color: white;
-  font-weight: 600;
-  padding: 10px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  text-align: center;
-  font-size: 1rem;
-  border: none;
-}
-
-table {
-  table-layout: fixed; /* controla melhor a largura */
-  min-width: 100%; /* permite ocupar o container */
   border-collapse: collapse;
-  background-color: #fff;
-  font-size: 0.95rem;
-  border-radius: 8px;
+  font-size: 14px;
+  background-color: #ffffff;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.05);
+  /* Remova isso: border-radius e overflow */
 }
 
-th,
-td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-  white-space: nowrap;
-}
-th {
-  background-color: #f1f3f5;
+.table thead {
+  background-color: #f3f4f6;
   font-weight: 600;
+  text-align: left;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f3f4f6;
+  z-index: 2; /* suficiente para sobrepor conteúdo */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.table th,
+.table td {
+  padding: 12px 14px;
+  border: 1px solid #eaeaea; /* adiciona bordas em todos os lados */
+  vertical-align: middle;
+}
+
+.table th {
+  text-align: center;
   color: #333;
+  font-size: 13px;
 }
 
-tr:nth-child(even) {
-  background-color: #fafafa;
+.table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
 }
 
-tr:hover {
-  background-color: #f0f7ff;
-  transition: 0.2s;
+.table tbody tr:hover {
+  background-color: #f1f1f1;
 }
 
 .actions {
-  width: 100%;
-  align-items: center;
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.actions input {
-  width: 100%;
-  padding: 0.1rem;
-  border: none;
-  border-radius: 6px;
-  background-color: #f1f3f5;
-  font-size: 100rem;
+  gap: 6px;
+  align-items: center;
 }
 
 .iconButton {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
-  color: #357edd;
-  transition: color 0.2s;
+  font-size: 16px;
+  padding: 4px;
 }
 
 .iconButton:hover {
-  color: #1a4e96;
+  background-color: #f0f0f0;
+  border-radius: 4px;
 }
 
-/* 🆕 Força quebra de linha apenas nas células longas */
-td,
-th {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-  white-space: nowrap; /* ✅ impede quebra de texto */
-}
-
-td:nth-child(2) {
-  display: block;
-  max-width: 400px;
-  white-space: normal;
-  overflow-wrap: break-word;
-}
-
-th:nth-child(4),
-td:nth-child(4),
-th:nth-child(5),
-td:nth-child(5),
-th:nth-child(6),
-td:nth-child(6),
-th:nth-child(7),
-td:nth-child(7),
-th:nth-child(11),
-td:nth-child(11),
-th:nth-child(12),
-td:nth-child(12) {
-  width: 100px;
-  text-align: center;
-}
-
-th:nth-child(8),
-td:nth-child(8),
-th:nth-child(9),
-td:nth-child(9),
-th:nth-child(10),
-td:nth-child(10) {
-  width: 70px;
-  text-align: center;
-}
-
-th:nth-child(13),
-td:nth-child(13) {
-  width: 60px;
-  text-align: center;
-}
-
-.toolbar {
-  margin: 1rem 0;
-  text-align: right;
-}
-
-.excluirVariosBtn {
-  margin-left: 1rem;
-  background-color: #ffc107;
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.excluirToolbar {
-  margin-top: 1rem;
-  text-align: right;
+.checkbox {
+  width: 16px;
+  height: 16px;
 }
 
 .confirmDelete {
-  background-color: #dc3545;
+  background-color: #e74c3c;
   color: white;
-  padding: 0.5rem 1rem;
   border: none;
-  border-radius: 6px;
+  padding: 6px 10px;
+  border-radius: 4px;
   cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.2s;
+  font-weight: 500;
 }
 
 .confirmDelete:hover {
-  background-color: #b02a37;
+  background-color: #c0392b;
 }
 
 .carregarMais {
-  background-color: #204a94;
-  border-radius: 6px;
-  border: none;
-  margin-top: 10px;
+  padding: 8px 16px;
+  font-size: 14px;
+  background-color: #3498db;
   color: white;
-  padding: 0.6rem 1.2rem;
-  font-weight: 600;
+  border: none;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s;
 }
 
 .carregarMais:hover {
-  background-color: #357edd;
+  background-color: #2980b9;
 }
 
 .botaoWrapper {
-  display: flex;
-  justify-content: center;
+  text-align: center;
   margin-top: 1rem;
 }
 
-/* ✅ RESPONSIVIDADE */
-@media (max-width: 768px) {
-  .tableWrapper {
-    padding: 0;
-  }
-
-  table {
-    min-width: 1000px;
-    font-size: 0.85rem;
-  }
-
-  td:nth-child(2) {
-    max-width: 300px;
-  }
-
-  .confirmDelete,
-  .carregarMais button {
-    font-size: 0.9rem;
-  }
+.excluirToolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
 }
 
-@media (max-width: 480px) {
-  table {
-    min-width: 950px;
-    font-size: 0.8rem;
-  }
+.loteVantajoso {
+  background-color: #f0fff4;
+  border-left: 4px solid #27ae60;
+}
 
-  td:nth-child(2) {
-    max-width: 260px;
-  }
-
-  .confirmDelete,
-  .carregarMais button {
-    font-size: 0.85rem;
-    padding: 0.5rem 0.75rem;
-  }
+.loteVantajoso:hover {
+  background-color: #e6ffef;
 }
