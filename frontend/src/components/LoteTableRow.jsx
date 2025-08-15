@@ -49,6 +49,12 @@ const LoteTableRow = ({
           className={styles.select}
           name="classificacao"
           value={cotacoesSelecionadas[lote.id] || ''}
+          style={{
+            padding: '8px 8px',
+            minWidth: 280,
+            borderRadius: 4,
+            border: '1px solid #ccc',
+          }}
           onChange={(e) => {
             const tipo = e.target.value;
             const valorCotacao = configuracoes?.[tipo] ?? 0;

@@ -41,20 +41,23 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
     }
 
     const regex =
-      /(?<lote>0\d{3}\.\d{6,}-\d)[\s\S]*?(?<descricao>.+?)\s+R\$ ?(?<valor>[\d.]+,[\d]{2})/gs;
+      /(?<lote>\d{4}\.\d{6,}-\d(?:[\s\/]+\d{4}\.\d{3}\.\d{8}-\d)*)\s+(?<descricao>.+?)\s+R\$\s?(?<valor>[\d.]+,\d{2})/gs;
 
     const lotes = [];
-    const limiteImportacao = Infinity;
-
     let match;
-    while (
-      (match = regex.exec(texto)) !== null &&
-      lotes.length < limiteImportacao
-    ) {
+
+    while ((match = regex.exec(texto)) !== null) {
       const valorNumerico = parseFloat(
-        match.groups.valor.replace('.', '').replace(',', '.')
+        match.groups.valor.replace(/\./g, '').replace(',', '.')
       );
-      const descricao = match.groups.descricao.trim().replace(/\s+/g, ' ');
+
+      // 2) Limpeza: se a descrição começar com 1+ códigos extras, remove todos.
+      //    (alguns PDFs repetem o código numa nova linha)
+      const descricaoBruta = match.groups.descricao.trim().replace(/\s+/g, ' ');
+      const descricao = descricaoBruta.replace(
+        /^(?:\/?\s*\d{4}\.\d{3}\.\d{8}-\d\s*)+/,
+        ''
+      );
 
       const pesoMatch = descricao.match(/peso lote[:\s]*([\d,.]+)g?/i);
       const pesoExtraido = pesoMatch?.[1]
@@ -62,7 +65,7 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
         : 0;
 
       lotes.push({
-        numeroLote: match.groups.lote.trim(),
+        numeroLote: match.groups.lote.trim(), // agora inclui o(s) código(s) adicional(is), com ou sem "/"
         descricao,
         classificacao: '',
         valor: valorNumerico,
@@ -78,7 +81,6 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
         criadoEm: new Date(),
       });
     }
-
     if (lotes.length === 0) {
       return res.status(400).json({
         sucesso: false,

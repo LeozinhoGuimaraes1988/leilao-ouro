@@ -11,6 +11,59 @@ const API_BASE =
     ? 'http://localhost:3001/api'
     : 'https://leilao-ouro.onrender.com/api';
 
+/* ========================= Helpers ========================= */
+
+/** Extrai só o primeiro código no formato ####.######-# */
+const extrairPrimeiroCodigo = (s = '') => {
+  const texto = String(s).replace(/\s+/g, ' ').trim();
+  const m = texto.match(/(\d{4}\.\d{6,}-\d)/);
+  return m ? m[1] : texto;
+};
+
+/** Extrai um possível segundo código (após / ou quebra de linha) ####.###.########-# */
+const extrairSegundoCodigo = (s = '') => {
+  const texto = String(s);
+  const m = texto.match(/(?:\/|\s)(\d{4}\.\d{3}\.\d{8}-\d)/);
+  return m ? m[1] : '';
+};
+
+/** Remove máscara e padroniza comprimento para comparação estável */
+const normalizarChave = (codigo = '') =>
+  String(codigo).replace(/\D/g, '').padStart(20, '0');
+
+/** Comparador principal: primeiro pelo 1º código; se empatar, usa o 2º */
+const compararLotes = (a, b, asc = true) => {
+  const aFirst = normalizarChave(
+    extrairPrimeiroCodigo(a.numeroLote || a.lote || a.id)
+  );
+  const bFirst = normalizarChave(
+    extrairPrimeiroCodigo(b.numeroLote || b.lote || b.id)
+  );
+
+  if (aFirst !== bFirst) {
+    return asc ? aFirst.localeCompare(bFirst) : bFirst.localeCompare(aFirst);
+  }
+
+  const aSecond = normalizarChave(extrairSegundoCodigo(a.numeroLote || ''));
+  const bSecond = normalizarChave(extrairSegundoCodigo(b.numeroLote || ''));
+
+  return asc ? aSecond.localeCompare(bSecond) : bSecond.localeCompare(aSecond);
+};
+
+/** Normaliza para busca: remove tudo que não é dígito */
+const normalizarBusca = (s = '') => String(s).replace(/\D/g, '');
+
+/** Filtra por número do lote (considera primeiro e segundo código) */
+const filtrarPorBusca = (lista, termo) => {
+  const n = normalizarBusca(termo);
+  if (!n) return lista;
+  return lista.filter((l) => {
+    const a = normalizarBusca(l.numeroLote || l.lote || '');
+    return a.includes(n);
+  });
+};
+/* ========================================================== */
+
 const LoteTable = ({ onEdit }) => {
   const [lotes, setLotes] = useState([]);
   const [carregando, setCarregando] = useState(false);
@@ -21,6 +74,10 @@ const LoteTable = ({ onEdit }) => {
   const [selecionados, setSelecionados] = useState([]);
   const [cotacoesSelecionadas, setCotacoesSelecionadas] = useState({});
   const [lotesVantajosos, setLotesVantajosos] = useState([]);
+
+  // ------- BUSCA -------
+  const [termoBusca, setTermoBusca] = useState('');
+  const lotesExibidos = termoBusca ? filtrarPorBusca(lotes, termoBusca) : lotes;
 
   useEffect(() => {
     carregarPrimeiraPagina();
@@ -33,11 +90,16 @@ const LoteTable = ({ onEdit }) => {
       const {
         lotes: novosLotes,
         ultimoDocumentoDaPagina,
-        temMais,
+        temMais: temMaisPaginas,
       } = await getLotesPaginados(5);
-      setLotes(novosLotes);
+
+      const ordenados = [...novosLotes].sort((a, b) =>
+        compararLotes(a, b, true)
+      );
+      setLotes(ordenados);
       setUltimoDoc(ultimoDocumentoDaPagina);
-      setTemMais(temMais);
+      setTemMais(temMaisPaginas);
+      setOrdemAscendente(true);
     } catch (err) {
       console.error('Erro ao carregar lotes:', err);
     } finally {
@@ -52,11 +114,16 @@ const LoteTable = ({ onEdit }) => {
       const {
         lotes: novosLotes,
         ultimoDocumentoDaPagina,
-        temMais,
+        temMais: temMaisPaginas,
       } = await getLotesPaginados(5, ultimoDoc);
-      setLotes((prev) => [...prev, ...novosLotes]);
+
+      setLotes((prev) =>
+        [...prev, ...novosLotes].sort((a, b) =>
+          compararLotes(a, b, ordemAscendente)
+        )
+      );
       setUltimoDoc(ultimoDocumentoDaPagina);
-      setTemMais(temMais);
+      setTemMais(temMaisPaginas);
     } catch (err) {
       console.error('Erro ao carregar mais lotes:', err);
     } finally {
@@ -80,19 +147,11 @@ const LoteTable = ({ onEdit }) => {
   };
 
   const ordenarLotes = () => {
-    const lotesOrdenados = [...lotes].sort((a, b) => {
-      const numeroA = a.numeroLote || a.lote || a.id;
-      const numeroB = b.numeroLote || b.lote || b.id;
-      return ordemAscendente
-        ? String(numeroA).localeCompare(String(numeroB), 'pt-BR', {
-            numeric: true,
-          })
-        : String(numeroB).localeCompare(String(numeroA), 'pt-BR', {
-            numeric: true,
-          });
-    });
-    setLotes(lotesOrdenados);
-    setOrdemAscendente(!ordemAscendente);
+    const novaOrdemAsc = !ordemAscendente;
+    setLotes((prev) =>
+      [...prev].sort((a, b) => compararLotes(a, b, novaOrdemAsc))
+    );
+    setOrdemAscendente(novaOrdemAsc);
   };
 
   const excluirLote = async (id) => {
@@ -221,11 +280,44 @@ const LoteTable = ({ onEdit }) => {
     <div className={styles.container}>
       <div className={styles.header}>
         <UploadPdf onUploadSuccess={handleUploadSuccess} />
+
+        {/* Busca por número do lote */}
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+            marginTop: 20,
+          }}
+        >
+          <input
+            type="text"
+            value={termoBusca}
+            onChange={(e) => setTermoBusca(e.target.value)}
+            placeholder="Buscar por número do lote..."
+            aria-label="Buscar por número do lote"
+            style={{
+              padding: '8px 10px',
+              minWidth: 280,
+              borderRadius: 4,
+              border: '1px solid #ccc',
+            }}
+          />
+          {termoBusca && (
+            <button onClick={() => setTermoBusca('')}>Limpar</button>
+          )}
+        </div>
       </div>
 
-      {lotes.length === 0 && <p>Nenhum lote adicionado.</p>}
+      {lotesExibidos.length === 0 && !carregando && (
+        <p>
+          {termoBusca
+            ? `Nenhum lote encontrado para "${termoBusca}".`
+            : 'Nenhum lote adicionado.'}
+        </p>
+      )}
 
-      {lotes.length > 0 && (
+      {lotesExibidos.length > 0 && (
         <div className={styles.scrollWrapper}>
           <table className={styles.table}>
             <thead>
@@ -233,8 +325,6 @@ const LoteTable = ({ onEdit }) => {
                 <th onClick={ordenarLotes} style={{ cursor: 'pointer' }}>
                   Lote {ordemAscendente ? '▲' : '▼'}
                 </th>
-                {/* <th>Selecionar</th> */}
-                {/* <th>Número</th> */}
                 <th>Descrição</th>
                 <th>Classificação</th>
                 <th>Valor (R$)</th>
@@ -250,7 +340,7 @@ const LoteTable = ({ onEdit }) => {
               </tr>
             </thead>
             <tbody>
-              {lotes.map((lote, index) => (
+              {lotesExibidos.map((lote, index) => (
                 <LoteTableRow
                   key={`${lote.id}-${index}`}
                   lote={lote}
@@ -275,7 +365,8 @@ const LoteTable = ({ onEdit }) => {
 
       {carregando && <p>Carregando...</p>}
 
-      {temMais && !carregando && (
+      {/* Esconde "Carregar mais" quando estiver em modo de busca */}
+      {temMais && !carregando && !termoBusca && (
         <div className={styles.botaoWrapper}>
           <button onClick={carregarMaisLotes} className={styles.carregarMais}>
             Carregar mais
