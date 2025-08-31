@@ -4,6 +4,12 @@ import { Timestamp } from 'firebase-admin/firestore';
 
 const router = express.Router();
 
+/** Healthcheck para o detectApiBase do front */
+router.get('/health', (req, res) => {
+  res.json({ ok: true, ts: Date.now() });
+});
+
+/** CRIAR LOTE */
 router.post('/', async (req, res) => {
   try {
     const {
@@ -17,13 +23,10 @@ router.post('/', async (req, res) => {
       pesoLote,
     } = req.body;
 
-    // ✅ REMOVIDO as linhas de console.error que estavam no lugar errado
-
     const pesoReal = pesoLote - descontoPesoPedra;
     const totalComPercentual = lance + lance * (percentualExtra / 100);
     const valorFinalPorGrama = pesoReal > 0 ? totalComPercentual / pesoReal : 0;
 
-    // Cotação (usa valor fixo ou configurações externas)
     const configDoc = await db
       .collection('configuracoes')
       .doc('percentuais')
@@ -58,13 +61,12 @@ router.post('/', async (req, res) => {
     const docRef = await db.collection('lotes').add(novoLote);
     res.status(201).json({ sucesso: true, id: docRef.id, lote: novoLote });
   } catch (error) {
-    // ✅ AQUI SIM é o lugar correto para o console.error
-    console.error('❌ Erro ao salvar lote:', error.message);
-    console.error(error.stack);
+    console.error('❌ Erro ao salvar lote:', error);
     res.status(500).json({ sucesso: false, erro: error.message });
   }
 });
 
+/** LISTAR LOTES (com total) */
 router.get('/', async (req, res) => {
   try {
     const configDoc = await db
@@ -95,18 +97,72 @@ router.get('/', async (req, res) => {
       };
     });
 
-    res.json({ sucesso: true, lotes });
+    res.json({ sucesso: true, total: snapshot.size, lotes });
   } catch (error) {
     console.error('Erro ao buscar lotes:', error);
     res.status(500).json({ sucesso: false, erro: error.message });
   }
 });
 
+/** ⛏️ EXCLUIR MÚLTIPLOS (ids no body) — precisa vir ANTES de '/:id' */
+router.post('/excluir-multiplos', async (req, res) => {
+  const { ids } = req.body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res
+      .status(400)
+      .json({ sucesso: false, erro: 'Nenhum ID fornecido' });
+  }
+
+  const batch = db.batch();
+
+  try {
+    for (const id of ids) {
+      const ref = db.collection('lotes').doc(id);
+      batch.delete(ref);
+    }
+
+    await batch.commit();
+    res.json({ sucesso: true, excluidos: ids.length });
+  } catch (error) {
+    console.error('Erro ao excluir múltiplos lotes:', error);
+    res.status(500).json({ sucesso: false, erro: 'Erro ao excluir lotes' });
+  }
+});
+
+/** 💣 EXCLUIR TODOS — precisa vir ANTES de '/:id' */
+router.delete('/excluir-todos', async (req, res) => {
+  try {
+    const col = db.collection('lotes');
+    const BATCH_SIZE = 400; // < 500
+    let excluidos = 0;
+
+    while (true) {
+      const snap = await col.limit(BATCH_SIZE).get();
+      if (snap.empty) break;
+
+      const batch = db.batch();
+      snap.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+
+      excluidos += snap.size;
+      console.log(`🔥 batch apagado: ${snap.size} | total=${excluidos}`);
+    }
+
+    return res.json({ sucesso: true, excluidos });
+  } catch (err) {
+    console.error('Erro ao excluir todos os lotes:', err);
+    return res
+      .status(500)
+      .json({ sucesso: false, erro: 'Erro ao excluir todos os lotes' });
+  }
+});
+
+/** EDITAR LOTE (/:id) — deixar DEPOIS das rotas específicas */
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Busca o documento atual para usar como base
     const ref = db.collection('lotes').doc(id);
     const snap = await ref.get();
     if (!snap.exists) {
@@ -116,14 +172,12 @@ router.put('/:id', async (req, res) => {
     }
     const atual = snap.data();
 
-    // helper: aceita vírgula e 0, e permite default do valor atual
     const toNum = (v, fallback) => {
       if (v === undefined || v === null || v === '') return fallback;
       const n = Number(String(v).replace(',', '.'));
       return Number.isNaN(n) ? fallback : n;
     };
 
-    // Body (alguns podem não vir do modal)
     const {
       numeroLote,
       classificacao,
@@ -133,11 +187,10 @@ router.put('/:id', async (req, res) => {
       pesoLote,
     } = req.body;
 
-    // Mescla preservando os valores atuais quando não enviados
     const merged = {
       numeroLote: numeroLote ?? atual.numeroLote,
       classificacao: classificacao ?? atual.classificacao,
-      lance: toNum(lance, toNum(atual.lance, 0)), // aceita 0
+      lance: toNum(lance, toNum(atual.lance, 0)),
       percentualExtra: toNum(percentualExtra, toNum(atual.percentualExtra, 6)),
       descontoPesoPedra: toNum(
         descontoPesoPedra,
@@ -146,7 +199,6 @@ router.put('/:id', async (req, res) => {
       pesoLote: toNum(pesoLote, toNum(atual.pesoLote, 0)),
     };
 
-    // Cotação
     const configDoc = await db
       .collection('configuracoes')
       .doc('percentuais')
@@ -155,7 +207,6 @@ router.put('/:id', async (req, res) => {
     const cotacaoBase =
       modoCotacao === 'manual' ? Number(cotacaoManual) : 573.97;
 
-    // Recalcula derivados
     const pesoReal = merged.pesoLote - merged.descontoPesoPedra;
     const totalComPercentual =
       merged.lance + merged.lance * (merged.percentualExtra / 100);
@@ -166,7 +217,7 @@ router.put('/:id', async (req, res) => {
         : 0;
 
     const loteAtualizado = {
-      ...atual, // mantém quaisquer outros campos
+      ...atual,
       ...merged,
       pesoReal,
       totalComPercentual,
@@ -185,6 +236,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+/** EXCLUIR LOTE UNITÁRIO (/:id) — deixar POR ÚLTIMO */
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -194,29 +246,6 @@ router.delete('/:id', async (req, res) => {
   } catch (error) {
     console.error('Erro ao excluir lote:', error);
     res.status(500).json({ sucesso: false, erro: error.message });
-  }
-});
-
-router.post('/excluir-multiplos', async (req, res) => {
-  const { ids } = req.body;
-
-  if (!Array.isArray(ids) || ids.length === 0) {
-    return res.status(400).json({ erro: 'Nenhum ID fornecido' });
-  }
-
-  const batch = db.batch();
-
-  try {
-    for (const id of ids) {
-      const ref = db.collection('lotes').doc(id);
-      batch.delete(ref);
-    }
-
-    await batch.commit();
-    res.json({ sucesso: true, excluidos: ids.length });
-  } catch (error) {
-    console.error('Erro ao excluir múltiplos lotes:', error);
-    res.status(500).json({ erro: 'Erro ao excluir lotes' });
   }
 });
 

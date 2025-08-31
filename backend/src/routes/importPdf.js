@@ -40,8 +40,10 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
       });
     }
 
+    // Regex ajustada: captura apenas o LOTE REAL (####.######-#),
+    // e deixa os internos para serem descartados
     const regex =
-      /(?<lote>\d{4}\.\d{6,}-\d(?:[\s\/]+\d{4}\.\d{3}\.\d{8}-\d)*)\s+(?<descricao>.+?)\s+R\$\s?(?<valor>[\d.]+,\d{2})/gs;
+      /(?<lote>\d{4}\.\d{6,7}-\d)\s+(?<descricao>.+?)\s+R\$\s?(?<valor>[\d.]+,\d{2})/gs;
 
     const lotes = [];
     let match;
@@ -51,8 +53,7 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
         match.groups.valor.replace(/\./g, '').replace(',', '.')
       );
 
-      // 2) Limpeza: se a descrição começar com 1+ códigos extras, remove todos.
-      //    (alguns PDFs repetem o código numa nova linha)
+      // Limpeza de códigos internos extras no início da descrição
       const descricaoBruta = match.groups.descricao.trim().replace(/\s+/g, ' ');
       const descricao = descricaoBruta.replace(
         /^(?:\/?\s*\d{4}\.\d{3}\.\d{8}-\d\s*)+/,
@@ -65,7 +66,7 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
         : 0;
 
       lotes.push({
-        numeroLote: match.groups.lote.trim(), // agora inclui o(s) código(s) adicional(is), com ou sem "/"
+        numeroLote: match.groups.lote.trim(), // só o lote real
         descricao,
         classificacao: '',
         valor: valorNumerico,
@@ -81,6 +82,7 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
         criadoEm: new Date(),
       });
     }
+
     if (lotes.length === 0) {
       return res.status(400).json({
         sucesso: false,
@@ -104,15 +106,20 @@ router.post('/importar-pdf', upload.single('pdf'), async (req, res) => {
 router.get('/lotes', async (req, res) => {
   try {
     const snapshot = await admin.firestore().collection('lotes').get();
+
     const lotes = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
 
-    res.json({ sucesso: true, total: lotes.length, lotes });
+    res.json({
+      sucesso: true,
+      total: snapshot.size, // <<<<<< esse é o número de lotes
+      lotes,
+    });
   } catch (error) {
     console.error('Erro ao buscar lotes:', error);
-    res.status(500).json({ erro: 'Erro ao buscar lotes' });
+    res.status(500).json({ sucesso: false, erro: 'Erro ao buscar lotes' });
   }
 });
 

@@ -142,19 +142,50 @@
 
 // export default ConfiguracoesCotacao;
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import styles from './ConfiguracoesCotacao.module.css';
 import Sidebar from './Sidebar.jsx';
 import { Link } from 'react-router-dom';
 
-const isLocalhost = window.location.hostname === 'localhost';
+/* ================== Detecta API ================== */
+const detectApiBase = async () => {
+  const isLocal = ['localhost', '127.0.0.1', '::1'].includes(
+    window.location.hostname
+  );
 
-const API_BASE = isLocalhost
-  ? 'http://localhost:3001/api' // Desenvolvimento local
-  : 'https://leilao-ouro.onrender.com/api'; // PRODUÇÃO aponta para Render
+  const candidates = isLocal
+    ? ['http://localhost:3001/api', 'https://leilao-ouro.onrender.com/api']
+    : ['/api', 'https://leilao-ouro.onrender.com/api'];
+
+  const tryBase = async (base, ms = 2000) => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    try {
+      const res = await fetch(`${base}/health`, {
+        method: 'GET',
+        signal: ctrl.signal,
+        cache: 'no-store',
+        credentials: 'omit',
+      });
+      clearTimeout(t);
+      return res.ok;
+    } catch {
+      clearTimeout(t);
+      return false;
+    }
+  };
+
+  for (const base of candidates) {
+    if (await tryBase(base)) return base;
+  }
+  return 'https://leilao-ouro.onrender.com/api';
+};
+/* ================================================ */
 
 const ConfiguracoesCotacao = () => {
+  const [API_BASE, setApiBase] = useState(null);
+
   const [valoresFixos, setValoresFixos] = useState({
     ouro750: '',
     ouroBaixo: '',
@@ -171,10 +202,44 @@ const ConfiguracoesCotacao = () => {
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState('');
   const [modoCotacao, setModoCotacao] = useState('manual');
-  const [tipoDefinicao, setTipoDefinicao] = useState('valores'); // 'valores' ou 'percentuais'
+  const [tipoDefinicao, setTipoDefinicao] = useState('valores');
   const [cotacaoManual, setCotacaoManual] = useState('');
 
+  // Buscar a API logo no início
   useEffect(() => {
+    (async () => {
+      const base = await detectApiBase();
+      setApiBase(base);
+    })();
+  }, []);
+
+  // Atualiza valores automaticamente a partir dos percentuais
+  const calcularValoresAutomaticos = useCallback(() => {
+    if (!cotacaoManual || tipoDefinicao !== 'percentuais') return;
+
+    const base = Number(cotacaoManual);
+    const novosValores = {
+      ouro750: percentuais.ouro750
+        ? ((base * Number(percentuais.ouro750)) / 100).toFixed(2)
+        : '',
+      ouroBaixo: percentuais.ouroBaixo
+        ? ((base * Number(percentuais.ouroBaixo)) / 100).toFixed(2)
+        : '',
+      pecaComDiamante: percentuais.pecaComDiamante
+        ? ((base * Number(percentuais.pecaComDiamante)) / 100).toFixed(2)
+        : '',
+    };
+
+    setValoresFixos(novosValores);
+  }, [cotacaoManual, percentuais, tipoDefinicao]);
+
+  useEffect(() => {
+    calcularValoresAutomaticos();
+  }, [calcularValoresAutomaticos]);
+
+  // Buscar configurações
+  useEffect(() => {
+    if (!API_BASE) return;
     const buscarConfiguracoes = async () => {
       try {
         const res = await axios.get(`${API_BASE}/configuracoes-cotacao`);
@@ -206,7 +271,7 @@ const ConfiguracoesCotacao = () => {
     };
 
     buscarConfiguracoes();
-  }, []);
+  }, [API_BASE]);
 
   const handleChangeValores = (e) => {
     const { name, value } = e.target;
@@ -218,30 +283,8 @@ const ConfiguracoesCotacao = () => {
     setPercentuais((prev) => ({ ...prev, [name]: value }));
   };
 
-  const calcularValoresAutomaticos = () => {
-    if (!cotacaoManual || tipoDefinicao !== 'percentuais') return;
-
-    const base = Number(cotacaoManual);
-    const novosValores = {
-      ouro750: percentuais.ouro750
-        ? ((base * Number(percentuais.ouro750)) / 100).toFixed(2)
-        : '',
-      ouroBaixo: percentuais.ouroBaixo
-        ? ((base * Number(percentuais.ouroBaixo)) / 100).toFixed(2)
-        : '',
-      pecaComDiamante: percentuais.pecaComDiamante
-        ? ((base * Number(percentuais.pecaComDiamante)) / 100).toFixed(2)
-        : '',
-    };
-
-    setValoresFixos(novosValores);
-  };
-
-  useEffect(() => {
-    calcularValoresAutomaticos();
-  }, [cotacaoManual, percentuais, tipoDefinicao]);
-
   const handleSalvar = async () => {
+    if (!API_BASE) return;
     setSalvando(true);
 
     try {
@@ -271,6 +314,7 @@ const ConfiguracoesCotacao = () => {
     }
   };
 
+  if (!API_BASE) return <p>🔄 Detectando servidor...</p>;
   if (carregando) return <p>Carregando...</p>;
 
   return (
@@ -282,7 +326,7 @@ const ConfiguracoesCotacao = () => {
         {/* Cotação Base do Ouro 1000 */}
         <div className={styles.secao}>
           <h3>Cotação Base</h3>
-          <div className={styles.inputGroup}>
+          <div>
             <label>Valor da cotação manual (ouro 1000 - R$)</label>
             <input
               type="number"
@@ -290,11 +334,12 @@ const ConfiguracoesCotacao = () => {
               value={cotacaoManual}
               onChange={(e) => setCotacaoManual(e.target.value)}
               placeholder="Ex: 200.00"
+              className={styles.cotacaoInput}
             />
           </div>
         </div>
 
-        {/* Seletor do Tipo de Definição */}
+        {/* Tipo de Definição */}
         <div className={styles.secao}>
           <h3>Método de Definição das Outras Cotações</h3>
           <div className={styles.radioGroup}>
@@ -334,15 +379,6 @@ const ConfiguracoesCotacao = () => {
                   onChange={handleChangePercentuais}
                   placeholder="Ex: 75"
                 />
-                {cotacaoManual && percentuais.ouro750 && (
-                  <small className={styles.valorCalculado}>
-                    = R${' '}
-                    {(
-                      (Number(cotacaoManual) * Number(percentuais.ouro750)) /
-                      100
-                    ).toFixed(2)}
-                  </small>
-                )}
               </div>
 
               <div className={styles.inputGroup}>
@@ -355,15 +391,6 @@ const ConfiguracoesCotacao = () => {
                   onChange={handleChangePercentuais}
                   placeholder="Ex: 58"
                 />
-                {cotacaoManual && percentuais.ouroBaixo && (
-                  <small className={styles.valorCalculado}>
-                    = R${' '}
-                    {(
-                      (Number(cotacaoManual) * Number(percentuais.ouroBaixo)) /
-                      100
-                    ).toFixed(2)}
-                  </small>
-                )}
               </div>
 
               <div className={styles.inputGroup}>
@@ -376,22 +403,12 @@ const ConfiguracoesCotacao = () => {
                   onChange={handleChangePercentuais}
                   placeholder="Ex: 40"
                 />
-                {cotacaoManual && percentuais.pecaComDiamante && (
-                  <small className={styles.valorCalculado}>
-                    = R${' '}
-                    {(
-                      (Number(cotacaoManual) *
-                        Number(percentuais.pecaComDiamante)) /
-                      100
-                    ).toFixed(2)}
-                  </small>
-                )}
               </div>
             </div>
           </div>
         )}
 
-        {/* Configuração por Valores Manuais */}
+        {/* Configuração por Valores */}
         {tipoDefinicao === 'valores' && (
           <div className={styles.secao}>
             <h3>Valores Manuais</h3>
@@ -435,7 +452,7 @@ const ConfiguracoesCotacao = () => {
           </div>
         )}
 
-        {/* Resumo das Cotações */}
+        {/* Resumo */}
         <div className={styles.resumo}>
           <h3>Resumo das Cotações Atuais</h3>
           <div className={styles.resumoGrid}>
@@ -462,6 +479,7 @@ const ConfiguracoesCotacao = () => {
           </div>
         </div>
 
+        {/* Ações */}
         <div className={styles.acoes}>
           <button
             onClick={handleSalvar}

@@ -1,177 +1,5 @@
-/* .container {
-  background-color: #f8f9fb;
-  padding: 2rem;
-  border-radius: 8px;
-  max-width: 400px;
-  margin: 2rem auto;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.05);
-}
-
-h2 {
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.inputGroup {
-  margin-bottom: 1rem;
-  display: flex;
-  flex-direction: column;
-}
-
-.modoCotacao {
-  display: flex;
-  flex-direction: column;
-  gap: 1.2rem;
-  margin-bottom: 1rem;
-}
-
-.radioGroup {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.radioGroup label {
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.radioWrapper {
-  display: flex;
-  flex-direction: column;
-
-  gap: 1rem;
-  margin-bottom: 1.2rem;
-
-  flex-wrap: wrap;
-}
-
-.radioItem {
-  display: flex;
-  width: 10%;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.radioItem span.valor {
-  font-weight: bold;
-  color: #1d4ed8;
-  margin-left: 0.3rem;
-}
-
-label {
-  margin-bottom: 0.3rem;
-  font-weight: 500;
-  color: #333;
-}
-
-input {
-  padding: 0.6rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 1rem;
-}
-
-.salvarBtn,
-.voltarBtn {
-  width: 100%;
-  padding: 0.8rem;
-  background-color: #357edd;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.salvarBtn:hover,
-.voltarBtn:hover {
-  background-color: #285bb5;
-}
-
-.voltarBtn {
-  margin-top: 10px;
-  width: 100%;
-  padding: 0.8rem;
-}
-
-p {
-  margin-top: 1rem;
-  text-align: center;
-  color: #444;
-}
-
-/* Telas médias (tablets) */
-/* @media (max-width: 768px) {
-  .container {
-    width: 80%;
-    padding: 1.5rem;
-    margin: 1.5rem auto;
-    max-width: 90%;
-  }
-
-  h2 {
-    font-size: 1.4rem;
-  }
-
-  input {
-    font-size: 0.95rem;
-  }
-
-  button {
-    font-size: 0.95rem;
-    padding: 0.7rem;
-  }
-}
-
-/* Telas pequenas (celulares) */
-/* @media (max-width: 480px) {
-  .container {
-    width: 80%;
-    padding: 1rem;
-    margin: 1rem auto;
-    max-width: 95%;
-    border-radius: 0;
-    box-shadow: none;
-  } */
-
-/* h2 {
-    font-size: 1.2rem;
-  }
-
-  .radioItem {
-    width: auto;
-    font-size: 0.9rem;
-    white-space: normal;
-    width: 20%;
-  }
-
-  input {
-    font-size: 0.9rem;
-    padding: 0.5rem;
-  }
-
-  button {
-    font-size: 0.9rem;
-    padding: 0.6rem;
-  }
-
-  .voltar {
-    margin-top: 0.8rem;
-  }
-
-  p {
-    font-size: 0.85rem;
-  }  */
-/* }  */
-
 .container {
-  margin-left: 250px;
+  margin-left: 30px;
   padding: 20px;
   max-width: 1200px;
 }
@@ -203,7 +31,15 @@ p {
 }
 
 .inputGroup input {
-  width: 100%;
+  width: 95%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.cotacaoInput {
+  width: 98%;
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;

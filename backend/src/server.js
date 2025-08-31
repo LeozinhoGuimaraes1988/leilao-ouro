@@ -33,6 +33,10 @@ app.get('/api/status', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'API funcionando! 🚀' });
 });
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // 🔥 NUNCA usar app.listen() no Firebase Functions
 // export apenas o app
 const PORT = process.env.PORT || 3000;

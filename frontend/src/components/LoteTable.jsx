@@ -6,11 +6,6 @@ import styles from './LoteTable.module.css';
 import { getLotesPaginados } from '../services/leilaoPaginado';
 import { calcularTotaisDoLote } from '../utils/calculoLote';
 
-const API_BASE =
-  window.location.hostname === 'localhost'
-    ? 'http://localhost:3001/api'
-    : 'https://leilao-ouro.onrender.com/api';
-
 /* ========================= Helpers ========================= */
 
 /** Extrai só o primeiro código no formato ####.######-# */
@@ -64,7 +59,29 @@ const filtrarPorBusca = (lista, termo) => {
 };
 /* ========================================================== */
 
+/* -------- Detecta automaticamente qual API usar -------- */
+const detectApiBase = async () => {
+  // 🔹 Se estiver rodando no localhost:5173 (dev), tenta o backend local
+  if (window.location.hostname === 'localhost') {
+    try {
+      const res = await fetch('http://localhost:3001/api/health');
+      if (res.ok) {
+        console.log('🔵 Usando API local');
+        return 'http://localhost:3001/api';
+      }
+    } catch {
+      console.warn('⚠️ API local não respondeu, caindo para Render...');
+    }
+  }
+
+  // 🔹 Default: Render
+  console.log('🟣 Usando API do Render');
+  return 'https://leilao-ouro.onrender.com/api';
+};
+
 const LoteTable = ({ onEdit }) => {
+  const [API_BASE, setApiBase] = useState(null);
+
   const [lotes, setLotes] = useState([]);
   const [carregando, setCarregando] = useState(false);
   const [ultimoDoc, setUltimoDoc] = useState(null);
@@ -75,14 +92,44 @@ const LoteTable = ({ onEdit }) => {
   const [cotacoesSelecionadas, setCotacoesSelecionadas] = useState({});
   const [lotesVantajosos, setLotesVantajosos] = useState([]);
 
+  // total de lotes no banco (para o rótulo “Excluir todos (X)”)
+  const [totalLotes, setTotalLotes] = useState(0);
+
   // ------- BUSCA -------
   const [termoBusca, setTermoBusca] = useState('');
   const lotesExibidos = termoBusca ? filtrarPorBusca(lotes, termoBusca) : lotes;
 
   useEffect(() => {
-    carregarPrimeiraPagina();
-    fetchConfiguracoes();
+    (async () => {
+      const base = await detectApiBase();
+      setApiBase(base);
+    })();
   }, []);
+
+  useEffect(() => {
+    if (API_BASE) {
+      carregarPrimeiraPagina();
+      fetchConfiguracoes();
+      atualizarTotalLotes(); // pega a contagem total do banco
+    }
+  }, [API_BASE]);
+
+  const atualizarTotalLotes = async () => {
+    try {
+      const r = await fetch(`${API_BASE}/lotes`);
+      const data = await r.json();
+
+      if (data?.sucesso) {
+        // preferir o campo total, senão cair no length
+        const total = Number(
+          data.total ?? (Array.isArray(data.lotes) ? data.lotes.length : 0)
+        );
+        setTotalLotes(total);
+      }
+    } catch (e) {
+      console.error('Erro ao contar lotes:', e);
+    }
+  };
 
   const carregarPrimeiraPagina = async () => {
     setCarregando(true);
@@ -161,6 +208,7 @@ const LoteTable = ({ onEdit }) => {
       const resultado = await res.json();
       if (resultado.sucesso) {
         setLotes((prev) => prev.filter((lote) => lote.id !== id));
+        atualizarTotalLotes();
       } else {
         alert('Erro ao excluir o lote');
       }
@@ -183,10 +231,49 @@ const LoteTable = ({ onEdit }) => {
       if (resultado.sucesso) {
         setLotes((prev) => prev.filter((l) => !selecionados.includes(l.id)));
         setSelecionados([]);
+        atualizarTotalLotes();
       }
     } catch (err) {
       console.error('Erro ao excluir lotes:', err);
       alert('Erro ao excluir lotes');
+    }
+  };
+
+  // NOVO: excluir TODOS os lotes do banco
+  const deletarTodosLotes = async () => {
+    if (
+      !window.confirm(
+        `Deseja realmente excluir TODOS os ${totalLotes} lote(s)? Essa ação é irreversível.`
+      )
+    )
+      return;
+
+    try {
+      const r = await fetch(`${API_BASE}/lotes/excluir-todos`, {
+        method: 'DELETE',
+      });
+      if (!r.ok) {
+        const txt = await r.text();
+        throw new Error(`HTTP ${r.status} - ${txt}`);
+      }
+      const data = await r.json();
+      console.log('🔵 Resposta do back:', data);
+
+      if (data?.sucesso) {
+        alert(`✅ ${data.excluidos ?? 0} lote(s) foram excluídos!`);
+
+        // Recarrega estado a partir do servidor (garante persistência)
+        await atualizarTotalLotes();
+        setLotes([]);
+        setSelecionados([]);
+        setTemMais(false);
+        setUltimoDoc(null);
+      } else {
+        alert(data?.erro || 'Erro ao excluir todos os lotes');
+      }
+    } catch (err) {
+      console.error('Erro ao excluir todos os lotes:', err);
+      alert('Erro ao excluir todos os lotes');
     }
   };
 
@@ -195,19 +282,14 @@ const LoteTable = ({ onEdit }) => {
     setUltimoDoc(null);
     setTemMais(true);
     await carregarPrimeiraPagina();
+    atualizarTotalLotes();
   };
 
   // --------- CARRINHO DE COMPRAS ---------
-
   const handleToggleVantajoso = (lote, isVantajoso) => {
     if (isVantajoso) {
       const { total, ganhoEstimado } = calcularTotaisDoLote(lote);
-
-      const loteComTotais = {
-        ...lote,
-        total,
-        ganhoEstimado,
-      };
+      const loteComTotais = { ...lote, total, ganhoEstimado };
 
       setLotesVantajosos((prev) => {
         if (!prev.some((l) => l.id === lote.id))
@@ -273,8 +355,11 @@ const LoteTable = ({ onEdit }) => {
     link.click();
     document.body.removeChild(link);
   };
-
   // --------- FIM CARRINHO ---------
+
+  if (!API_BASE) {
+    return <p>Detectando servidor...</p>;
+  }
 
   return (
     <div className={styles.container}>
@@ -365,8 +450,7 @@ const LoteTable = ({ onEdit }) => {
 
       {carregando && <p>Carregando...</p>}
 
-      {/* Esconde "Carregar mais" quando estiver em modo de busca */}
-      {temMais && !carregando && !termoBusca && (
+      {!termoBusca && temMais && !carregando && (
         <div className={styles.botaoWrapper}>
           <button onClick={carregarMaisLotes} className={styles.carregarMais}>
             Carregar mais
@@ -378,6 +462,17 @@ const LoteTable = ({ onEdit }) => {
         <div className={styles.excluirToolbar}>
           <button onClick={deletarVariosLotes} className={styles.confirmDelete}>
             🗑️ Excluir Selecionados ({selecionados.length})
+          </button>
+
+          {/* NOVO botão: excluir TODOS os lotes do banco */}
+          <button
+            onClick={deletarTodosLotes}
+            className={styles.confirmDelete}
+            style={{ background: '#c0392b', marginLeft: 8 }}
+            disabled={totalLotes === 0}
+            title="Exclui todos os lotes do banco"
+          >
+            🧨 Excluir todos ({totalLotes})
           </button>
         </div>
       )}
