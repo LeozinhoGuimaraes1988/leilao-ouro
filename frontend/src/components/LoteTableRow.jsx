@@ -22,9 +22,6 @@ const LoteTableRow = ({
     pecaComDiamante: Number(configuracoes?.pecaComDiamante || 0),
   };
 
-  console.log('🟢 Config recebido:', configuracoes);
-  console.log('🟢 Valores usados:', cotacoes);
-
   // 🔹 Hook recebe também configuracoes e decide baseado na classificação
   const {
     valor,
@@ -62,10 +59,9 @@ const LoteTableRow = ({
               parseFloat(lote.pesoLote ?? 0) -
               parseFloat(lote.descontoPesoPedra ?? 0);
 
+            // 🔹 Sempre recalcula o lance com base na nova cotação
             const lanceAtualizado =
-              lote.lance && Number(lote.lance) > 0
-                ? Number(lote.lance)
-                : valorCotacao * (isNaN(pesoReal) ? 0 : pesoReal);
+              valorCotacao * (isNaN(pesoReal) ? 0 : pesoReal);
 
             const novoLote = {
               ...lote,

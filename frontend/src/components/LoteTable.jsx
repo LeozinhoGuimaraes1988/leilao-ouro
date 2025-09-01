@@ -4,7 +4,7 @@ import LoteTableRow from './LoteTableRow';
 import CarrinhoCompras from './CarrinhoCompras';
 import styles from './LoteTable.module.css';
 import { getLotesPaginados } from '../services/leilaoPaginado';
-import { calcularTotaisDoLote } from '../utils/calculoLote';
+import { calcularTotaisExcelLike } from '../utils/calculoLote';
 
 /* ========================= Helpers ========================= */
 
@@ -294,7 +294,7 @@ const LoteTable = ({ onEdit, lotes, setLotes }) => {
   // --------- CARRINHO DE COMPRAS ---------
   const handleToggleVantajoso = (lote, isVantajoso) => {
     if (isVantajoso) {
-      const { total, ganhoEstimado } = calcularTotaisDoLote(lote);
+      const { total, ganhoEstimado } = calcularTotaisExcelLike(lote);
       const loteComTotais = { ...lote, total, ganhoEstimado };
 
       setLotesVantajosos((prev) => {
