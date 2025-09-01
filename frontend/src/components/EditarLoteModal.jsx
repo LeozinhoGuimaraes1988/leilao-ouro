@@ -1,3 +1,4 @@
+// src/components/EditarLoteModal.jsx
 import React, { useState, useEffect } from 'react';
 import styles from './EditarLoteModal.module.css';
 
@@ -15,11 +16,11 @@ const EditarLoteModal = ({ lote, onClose, onSave }) => {
 
     setForm({
       ...lote,
-      // se não houver lance ou for 0, sugere o calculado; senão mantém o existente
+      // ❗ Se lance for undefined/null/'' -> sugere; se for 0, mantém 0
       lance:
         lote.lance === undefined ||
         lote.lance === null ||
-        Number(lote.lance) === 0
+        String(lote.lance) === ''
           ? lanceCalculado
           : Number(lote.lance),
       pesoLote: Number(lote.pesoLote ?? 0),
@@ -33,7 +34,6 @@ const EditarLoteModal = ({ lote, onClose, onSave }) => {
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    // converte para número quando o input é number
     const parsed =
       type === 'number' ? (value === '' ? '' : Number(value)) : value;
     setForm((prev) => ({ ...prev, [name]: parsed }));
@@ -51,14 +51,14 @@ const EditarLoteModal = ({ lote, onClose, onSave }) => {
     const payload = {
       ...form,
       id: form.id ?? lote.id,
-      lance: toNum(form.lance, 0), // aceita 0
+      lance: toNum(form.lance, 0), // 0 é válido e deve ser preservado
       pesoLote: toNum(form.pesoLote, 0),
       descontoPesoPedra: toNum(form.descontoPesoPedra, 0),
       percentualExtra: toNum(form.percentualExtra ?? 6, 6),
     };
 
-    await onSave(payload); // <<< aguarde o PUT
-    onClose(); // <<< feche depois
+    await onSave(payload); // aguarda salvar no pai/back
+    onClose(); // fecha depois
   };
 
   return (
@@ -110,20 +110,6 @@ const EditarLoteModal = ({ lote, onClose, onSave }) => {
             />
             <label htmlFor="descontoPesoPedra">Desconto Peso Pedra</label>
           </div>
-
-          {/* opcional: manter o percentualExtra visível/ajustável */}
-          {/* <div className={styles.floatingGroup}>
-            <input
-              id="percentualExtra"
-              name="percentualExtra"
-              type="number"
-              step="0.01"
-              value={form.percentualExtra === '' ? '' : form.percentualExtra}
-              onChange={handleChange}
-              placeholder=" "
-            />
-            <label htmlFor="percentualExtra">Percentual Extra (%)</label>
-          </div> */}
 
           <button type="submit" className={styles.salvar}>
             Salvar

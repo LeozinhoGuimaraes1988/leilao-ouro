@@ -1,147 +1,3 @@
-// import React, { useEffect, useState } from 'react';
-// import axios from 'axios';
-// import styles from './ConfiguracoesCotacao.module.css';
-// import Sidebar from './Sidebar';
-// import { Link } from 'react-router-dom';
-
-// const isLocalhost = window.location.hostname === 'localhost';
-
-// const API_BASE = isLocalhost
-//   ? 'http://localhost:3001/api' // Desenvolvimento local
-//   : 'https://leilao-ouro.onrender.com/api'; // PRODUÇÃO aponta para Render
-
-// const ConfiguracoesCotacao = () => {
-//   const [percentuais, setPercentuais] = useState({
-//     ouro750: '',
-//     ouroBaixo: '',
-//     pecaComDiamante: '',
-//   });
-
-//   const [carregando, setCarregando] = useState(true);
-//   const [salvando, setSalvando] = useState(false);
-//   const [mensagem, setMensagem] = useState('');
-//   const [modoCotacao, setModoCotacao] = useState('manual');
-//   const [cotacaoManual, setCotacaoManual] = useState('');
-
-//   useEffect(() => {
-//     const buscarPercentuais = async () => {
-//       try {
-//         const res = await axios.get(`${API_BASE}/configuracoes-cotacao`);
-
-//         setPercentuais(res.data.valoresFixos);
-//         setModoCotacao(res.data.modoCotacao || 'manual');
-//         setCotacaoManual(res.data.cotacaoManual || '');
-//       } catch (err) {
-//         console.error('Erro ao buscar configurações:', err);
-//       } finally {
-//         setCarregando(false);
-//       }
-//     };
-
-//     buscarPercentuais();
-//   }, []);
-
-//   const handleChange = (e) => {
-//     const { name, value } = e.target;
-//     setPercentuais((prev) => ({ ...prev, [name]: value }));
-//   };
-
-//   const handleSalvar = async () => {
-//     setSalvando(true);
-
-//     try {
-//       await axios.put(`${API_BASE}/configuracoes-cotacao`, {
-//         modoCotacao,
-//         cotacaoManual: Number(cotacaoManual),
-//         valoresFixos: {
-//           ouro750: Number(percentuais.ouro750),
-//           ouroBaixo: Number(percentuais.ouroBaixo),
-//           pecaComDiamante: Number(percentuais.pecaComDiamante),
-//         },
-//       });
-
-//       setMensagem('✅ Configurações salvas com sucesso!');
-//     } catch (err) {
-//       console.error('Erro ao salvar:', err);
-//       setMensagem('❌ Erro ao salvar configurações');
-//     } finally {
-//       setSalvando(false);
-//       setTimeout(() => setMensagem(''), 3000);
-//     }
-//   };
-
-//   if (carregando) return <p>Carregando...</p>;
-
-//   return (
-//     <div>
-//       <Sidebar />
-//       <div className={styles.container}>
-//         <h2>Configurações de Cotação</h2>
-
-//         <div className={styles.inputGroup}>
-//           <p>
-//             Tipo de cotação atual: <strong>Manual</strong>
-//           </p>
-//           <div className={styles.inputGroup}>
-//             <label>Valor da cotação manual (ouro 1000 - R$)</label>
-//             <input
-//               type="number"
-//               value={cotacaoManual}
-//               onChange={(e) => setCotacaoManual(e.target.value)}
-//             />
-//           </div>
-//         </div>
-
-//         <div className={styles.inputGroup}>
-//           <label>Valor Ouro 750 (R$)</label>
-//           <input
-//             type="number"
-//             name="ouro750"
-//             value={percentuais.ouro750}
-//             onChange={handleChange}
-//           />
-//         </div>
-
-//         <div className={styles.inputGroup}>
-//           <label>Ouro Baixo (R$)</label>
-//           <input
-//             type="number"
-//             name="ouroBaixo"
-//             value={percentuais.ouroBaixo}
-//             onChange={handleChange}
-//           />
-//         </div>
-
-//         <div className={styles.inputGroup}>
-//           <label>Peça com Diamante (R$)</label>
-//           <input
-//             type="number"
-//             name="pecaComDiamante"
-//             value={percentuais.pecaComDiamante}
-//             onChange={handleChange}
-//           />
-//         </div>
-
-//         <button
-//           onClick={handleSalvar}
-//           disabled={salvando}
-//           className={styles.salvarBtn}
-//         >
-//           {salvando ? 'Salvando...' : 'Salvar Configurações'}
-//         </button>
-
-//         <Link to="/home">
-//           <button className={styles.voltarBtn}>Voltar</button>
-//         </Link>
-
-//         {mensagem && <p>{mensagem}</p>}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default ConfiguracoesCotacao;
-
 import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import styles from './ConfiguracoesCotacao.module.css';
@@ -186,7 +42,14 @@ const detectApiBase = async () => {
 const ConfiguracoesCotacao = () => {
   const [API_BASE, setApiBase] = useState(null);
 
-  const [valoresFixos, setValoresFixos] = useState({
+  // 🔹 valores separados
+  const [valoresManuais, setValoresManuais] = useState({
+    ouro750: '',
+    ouroBaixo: '',
+    pecaComDiamante: '',
+  });
+
+  const [valoresPercentuais, setValoresPercentuais] = useState({
     ouro750: '',
     ouroBaixo: '',
     pecaComDiamante: '',
@@ -201,11 +64,12 @@ const ConfiguracoesCotacao = () => {
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [mensagem, setMensagem] = useState('');
+
   const [modoCotacao, setModoCotacao] = useState('manual');
-  const [tipoDefinicao, setTipoDefinicao] = useState('valores');
+  const [tipoDefinicao, setTipoDefinicao] = useState(null);
   const [cotacaoManual, setCotacaoManual] = useState('');
 
-  // Buscar a API logo no início
+  // Detecta API
   useEffect(() => {
     (async () => {
       const base = await detectApiBase();
@@ -213,56 +77,36 @@ const ConfiguracoesCotacao = () => {
     })();
   }, []);
 
-  // Atualiza valores automaticamente a partir dos percentuais
-  const calcularValoresAutomaticos = useCallback(() => {
-    if (!cotacaoManual || tipoDefinicao !== 'percentuais') return;
-
-    const base = Number(cotacaoManual);
-    const novosValores = {
-      ouro750: percentuais.ouro750
-        ? ((base * Number(percentuais.ouro750)) / 100).toFixed(2)
-        : '',
-      ouroBaixo: percentuais.ouroBaixo
-        ? ((base * Number(percentuais.ouroBaixo)) / 100).toFixed(2)
-        : '',
-      pecaComDiamante: percentuais.pecaComDiamante
-        ? ((base * Number(percentuais.pecaComDiamante)) / 100).toFixed(2)
-        : '',
-    };
-
-    setValoresFixos(novosValores);
-  }, [cotacaoManual, percentuais, tipoDefinicao]);
-
-  useEffect(() => {
-    calcularValoresAutomaticos();
-  }, [calcularValoresAutomaticos]);
-
   // Buscar configurações
   useEffect(() => {
     if (!API_BASE) return;
+
     const buscarConfiguracoes = async () => {
       try {
         const res = await axios.get(`${API_BASE}/configuracoes-cotacao`);
 
-        setValoresFixos(
-          res.data.valoresFixos || {
-            ouro750: '',
-            ouroBaixo: '',
-            pecaComDiamante: '',
-          }
-        );
+        setValoresManuais({
+          ouro750: res.data?.valoresManuais?.ouro750 ?? '',
+          ouroBaixo: res.data?.valoresManuais?.ouroBaixo ?? '',
+          pecaComDiamante: res.data?.valoresManuais?.pecaComDiamante ?? '',
+        });
 
-        setPercentuais(
-          res.data.percentuais || {
-            ouro750: '',
-            ouroBaixo: '',
-            pecaComDiamante: '',
-          }
-        );
+        setValoresPercentuais({
+          ouro750: res.data?.valoresPercentuais?.ouro750 ?? '',
+          ouroBaixo: res.data?.valoresPercentuais?.ouroBaixo ?? '',
+          pecaComDiamante: res.data?.valoresPercentuais?.pecaComDiamante ?? '',
+        });
 
-        setModoCotacao(res.data.modoCotacao || 'manual');
-        setTipoDefinicao(res.data.tipoDefinicao || 'valores');
-        setCotacaoManual(res.data.cotacaoManual || '');
+        setPercentuais(res.data?.percentuais ?? {});
+
+        setModoCotacao(res.data?.modoCotacao || 'manual');
+        const lastTipo =
+          res.data?.tipoDefinicao ||
+          localStorage.getItem('tipoDefinicao') ||
+          'valores';
+        setTipoDefinicao(lastTipo);
+
+        setCotacaoManual(res.data?.cotacaoManual ?? '');
       } catch (err) {
         console.error('Erro ao buscar configurações:', err);
       } finally {
@@ -273,15 +117,47 @@ const ConfiguracoesCotacao = () => {
     buscarConfiguracoes();
   }, [API_BASE]);
 
-  const handleChangeValores = (e) => {
+  const handleChangeValoresManuais = (e) => {
     const { name, value } = e.target;
-    setValoresFixos((prev) => ({ ...prev, [name]: value }));
+    setValoresManuais((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleChangePercentuais = (e) => {
     const { name, value } = e.target;
     setPercentuais((prev) => ({ ...prev, [name]: value }));
   };
+
+  // troca segura do tipo (não zera nada)
+  const handleTipoDefinicaoChange = (value) => {
+    setTipoDefinicao(value);
+    localStorage.setItem('tipoDefinicao', value);
+  };
+
+  // Calcula valores percentuais
+  const calcularValoresAutomaticos = useCallback(() => {
+    if (carregando || tipoDefinicao !== 'percentuais') return;
+    const base = parseFloat(cotacaoManual);
+    if (!Number.isFinite(base)) return;
+
+    setValoresPercentuais({
+      ouro750:
+        percentuais.ouro750 !== ''
+          ? ((base * Number(percentuais.ouro750)) / 100).toFixed(2)
+          : valoresPercentuais.ouro750,
+      ouroBaixo:
+        percentuais.ouroBaixo !== ''
+          ? ((base * Number(percentuais.ouroBaixo)) / 100).toFixed(2)
+          : valoresPercentuais.ouroBaixo,
+      pecaComDiamante:
+        percentuais.pecaComDiamante !== ''
+          ? ((base * Number(percentuais.pecaComDiamante)) / 100).toFixed(2)
+          : valoresPercentuais.pecaComDiamante,
+    });
+  }, [carregando, cotacaoManual, percentuais, tipoDefinicao]);
+
+  useEffect(() => {
+    calcularValoresAutomaticos();
+  }, [calcularValoresAutomaticos]);
 
   const handleSalvar = async () => {
     if (!API_BASE) return;
@@ -292,10 +168,15 @@ const ConfiguracoesCotacao = () => {
         modoCotacao,
         tipoDefinicao,
         cotacaoManual: Number(cotacaoManual),
-        valoresFixos: {
-          ouro750: Number(valoresFixos.ouro750),
-          ouroBaixo: Number(valoresFixos.ouroBaixo),
-          pecaComDiamante: Number(valoresFixos.pecaComDiamante),
+        valoresManuais: {
+          ouro750: Number(valoresManuais.ouro750),
+          ouroBaixo: Number(valoresManuais.ouroBaixo),
+          pecaComDiamante: Number(valoresManuais.pecaComDiamante),
+        },
+        valoresPercentuais: {
+          ouro750: Number(valoresPercentuais.ouro750),
+          ouroBaixo: Number(valoresPercentuais.ouroBaixo),
+          pecaComDiamante: Number(valoresPercentuais.pecaComDiamante),
         },
         percentuais: {
           ouro750: Number(percentuais.ouro750),
@@ -315,7 +196,11 @@ const ConfiguracoesCotacao = () => {
   };
 
   if (!API_BASE) return <p>🔄 Detectando servidor...</p>;
-  if (carregando) return <p>Carregando...</p>;
+  if (carregando || tipoDefinicao === null) return <p>Carregando...</p>;
+
+  // 🔹 Decide quais valores mostrar no resumo
+  const valoresAtuais =
+    tipoDefinicao === 'percentuais' ? valoresPercentuais : valoresManuais;
 
   return (
     <div>
@@ -323,7 +208,7 @@ const ConfiguracoesCotacao = () => {
       <div className={styles.container}>
         <h2>Configurações de Cotação</h2>
 
-        {/* Cotação Base do Ouro 1000 */}
+        {/* Cotação Base */}
         <div className={styles.secao}>
           <h3>Cotação Base</h3>
           <div>
@@ -339,7 +224,7 @@ const ConfiguracoesCotacao = () => {
           </div>
         </div>
 
-        {/* Tipo de Definição */}
+        {/* Método */}
         <div className={styles.secao}>
           <h3>Método de Definição das Outras Cotações</h3>
           <div className={styles.radioGroup}>
@@ -348,7 +233,7 @@ const ConfiguracoesCotacao = () => {
                 type="radio"
                 value="percentuais"
                 checked={tipoDefinicao === 'percentuais'}
-                onChange={(e) => setTipoDefinicao(e.target.value)}
+                onChange={(e) => handleTipoDefinicaoChange(e.target.value)}
               />
               <span>Definir por porcentagem da cotação base</span>
             </label>
@@ -357,14 +242,14 @@ const ConfiguracoesCotacao = () => {
                 type="radio"
                 value="valores"
                 checked={tipoDefinicao === 'valores'}
-                onChange={(e) => setTipoDefinicao(e.target.value)}
+                onChange={(e) => handleTipoDefinicaoChange(e.target.value)}
               />
               <span>Definir valores manuais</span>
             </label>
           </div>
         </div>
 
-        {/* Configuração por Percentuais */}
+        {/* Percentuais */}
         {tipoDefinicao === 'percentuais' && (
           <div className={styles.secao}>
             <h3>Percentuais em relação ao Ouro 1000</h3>
@@ -377,10 +262,8 @@ const ConfiguracoesCotacao = () => {
                   name="ouro750"
                   value={percentuais.ouro750}
                   onChange={handleChangePercentuais}
-                  placeholder="Ex: 75"
                 />
               </div>
-
               <div className={styles.inputGroup}>
                 <label>Ouro Baixo (%)</label>
                 <input
@@ -389,10 +272,8 @@ const ConfiguracoesCotacao = () => {
                   name="ouroBaixo"
                   value={percentuais.ouroBaixo}
                   onChange={handleChangePercentuais}
-                  placeholder="Ex: 58"
                 />
               </div>
-
               <div className={styles.inputGroup}>
                 <label>Peça com Diamante (%)</label>
                 <input
@@ -401,14 +282,13 @@ const ConfiguracoesCotacao = () => {
                   name="pecaComDiamante"
                   value={percentuais.pecaComDiamante}
                   onChange={handleChangePercentuais}
-                  placeholder="Ex: 40"
                 />
               </div>
             </div>
           </div>
         )}
 
-        {/* Configuração por Valores */}
+        {/* Manuais */}
         {tipoDefinicao === 'valores' && (
           <div className={styles.secao}>
             <h3>Valores Manuais</h3>
@@ -419,33 +299,31 @@ const ConfiguracoesCotacao = () => {
                   type="number"
                   step="0.01"
                   name="ouro750"
-                  value={valoresFixos.ouro750}
-                  onChange={handleChangeValores}
+                  value={valoresManuais.ouro750}
+                  onChange={handleChangeValoresManuais}
                   placeholder="Ex: 150.00"
                 />
               </div>
-
               <div className={styles.inputGroup}>
                 <label>Ouro Baixo (R$)</label>
                 <input
                   type="number"
                   step="0.01"
                   name="ouroBaixo"
-                  value={valoresFixos.ouroBaixo}
-                  onChange={handleChangeValores}
-                  placeholder="Ex: 116.00"
+                  value={valoresManuais.ouroBaixo}
+                  onChange={handleChangeValoresManuais}
+                  placeholder="Ex: 100.00"
                 />
               </div>
-
               <div className={styles.inputGroup}>
                 <label>Peça com Diamante (R$)</label>
                 <input
                   type="number"
                   step="0.01"
                   name="pecaComDiamante"
-                  value={valoresFixos.pecaComDiamante}
-                  onChange={handleChangeValores}
-                  placeholder="Ex: 80.00"
+                  value={valoresManuais.pecaComDiamante}
+                  onChange={handleChangeValoresManuais}
+                  placeholder="Ex: 50.00"
                 />
               </div>
             </div>
@@ -462,18 +340,20 @@ const ConfiguracoesCotacao = () => {
             </div>
             <div className={styles.resumoItem}>
               <span>Ouro 750:</span>
-              <strong>R$ {Number(valoresFixos.ouro750 || 0).toFixed(2)}</strong>
+              <strong>
+                R$ {Number(valoresAtuais.ouro750 || 0).toFixed(2)}
+              </strong>
             </div>
             <div className={styles.resumoItem}>
               <span>Ouro Baixo:</span>
               <strong>
-                R$ {Number(valoresFixos.ouroBaixo || 0).toFixed(2)}
+                R$ {Number(valoresAtuais.ouroBaixo || 0).toFixed(2)}
               </strong>
             </div>
             <div className={styles.resumoItem}>
               <span>Peça com Diamante:</span>
               <strong>
-                R$ {Number(valoresFixos.pecaComDiamante || 0).toFixed(2)}
+                R$ {Number(valoresAtuais.pecaComDiamante || 0).toFixed(2)}
               </strong>
             </div>
           </div>

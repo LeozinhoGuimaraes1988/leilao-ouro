@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import testFirestoreRoutes from './routes/testFirestore.js';
-import cotacaoRoutes from './routes/cotacaoRoute.js';
+// import cotacaoRoutes from './routes/cotacaoRoute.js';
 import lotesRoutes from './routes/lotesRoute.js';
 import configuracoesRoutes from './routes/configuracoesRoutes.js';
 import importPdfRouter from './routes/importPdf.js';
@@ -26,7 +26,7 @@ app.get('/', (req, res) => {
 app.use('/api/configuracoes-cotacao', configuracoesRoutes);
 app.use('/api/lotes', lotesRoutes);
 app.use('/api/test-firestore', testFirestoreRoutes);
-app.use('/api', cotacaoRoutes);
+// app.use('/api', cotacaoRoutes);
 app.use('/api', importPdfRouter);
 
 app.get('/api/status', (req, res) => {

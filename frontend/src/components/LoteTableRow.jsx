@@ -1,4 +1,3 @@
-// src/components/LoteTableRow.jsx
 import { useCalculoLote } from '../hooks/useCalculoLote';
 import styles from './LoteTable.module.css';
 
@@ -16,6 +15,17 @@ const LoteTableRow = ({
   onToggleVantajoso,
   lotesVantajosos,
 }) => {
+  const cotacoes = {
+    ouro1000: Number(configuracoes?.ouro1000 || 0),
+    ouro750: Number(configuracoes?.ouro750 || 0),
+    ouroBaixo: Number(configuracoes?.ouroBaixo || 0),
+    pecaComDiamante: Number(configuracoes?.pecaComDiamante || 0),
+  };
+
+  console.log('🟢 Config recebido:', configuracoes);
+  console.log('🟢 Valores usados:', cotacoes);
+
+  // 🔹 Hook recebe também configuracoes e decide baseado na classificação
   const {
     valor,
     pesoLote,
@@ -25,45 +35,43 @@ const LoteTableRow = ({
     total,
     valorPorGrama,
     ganhoEstimado,
-  } = useCalculoLote(lote);
+  } = useCalculoLote(lote, cotacoes);
 
   const key = `${lote.id}-${lote.numeroLote}-${index}`;
   const isVantajoso = lotesVantajosos.some((l) => l.id === lote.id);
 
   return (
     <tr key={key}>
-      {/* Lote */}
       <td>{lote.numeroLote}</td>
-
-      {/* Selecionar (para exclusão em massa) */}
-
-      {/* Número interno (ID) */}
-      {/* <td>{lote.id}</td> */}
-
-      {/* Descrição */}
       <td>{lote.descricao || '—'}</td>
 
-      {/* Classificação (select) */}
+      {/* Classificação */}
       <td>
         <select
           className={styles.select}
           name="classificacao"
           value={cotacoesSelecionadas[lote.id] || ''}
-          style={{
-            padding: '8px 8px',
-            minWidth: 280,
-            borderRadius: 4,
-            border: '1px solid #ccc',
-          }}
           onChange={(e) => {
             const tipo = e.target.value;
-            const valorCotacao = configuracoes?.[tipo] ?? 0;
+            const valorCotacao =
+              tipo === 'ouro1000'
+                ? Number(configuracoes?.ouro1000 || 0)
+                : Number(configuracoes?.[tipo] || 0);
+
+            const pesoReal =
+              parseFloat(lote.pesoLote ?? 0) -
+              parseFloat(lote.descontoPesoPedra ?? 0);
+
+            const lanceAtualizado =
+              lote.lance && Number(lote.lance) > 0
+                ? Number(lote.lance)
+                : valorCotacao * (isNaN(pesoReal) ? 0 : pesoReal);
 
             const novoLote = {
               ...lote,
               classificacao: tipo,
               cotacaoBase: valorCotacao,
-              lance: 0,
+              lance: lanceAtualizado,
             };
 
             setLotes((prev) =>
@@ -92,21 +100,15 @@ const LoteTableRow = ({
         </select>
       </td>
 
-      {/* Valor, Lance, 6%, Total */}
+      {/* Cálculos */}
       <td>R$ {valor.toFixed(2)}</td>
       <td>R$ {lance.toFixed(2)}</td>
       <td>R$ {seisPorcento.toFixed(2)}</td>
       <td>R$ {total.toFixed(2)}</td>
-
-      {/* Desconto, Pesos */}
       <td>{lote.descontoPesoPedra || 0}g</td>
       <td>{pesoLote.toFixed(2)}g</td>
       <td>{pesoReal.toFixed(2)}g</td>
-
-      {/* Valor por grama */}
       <td>R$ {valorPorGrama.toFixed(2)}</td>
-
-      {/* Estimativa de Ganho */}
       <td
         style={{
           color:
@@ -117,7 +119,7 @@ const LoteTableRow = ({
         R$ {ganhoEstimado.toFixed(2)}
       </td>
 
-      {/* Ações: Editar, Excluir, Adicionar ao carrinho */}
+      {/* Ações */}
       <td>
         <div className={styles.actions}>
           <button className={styles.iconButton} onClick={() => onEdit(lote)}>
@@ -138,8 +140,6 @@ const LoteTableRow = ({
           >
             {isVantajoso ? '🛒✅' : '🛒'}
           </button>
-
-          {/* Checkbox fica como um ELEMENTO dentro do MESMO td (span) */}
           <span>
             <input
               type="checkbox"

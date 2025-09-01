@@ -79,10 +79,10 @@ const detectApiBase = async () => {
   return 'https://leilao-ouro.onrender.com/api';
 };
 
-const LoteTable = ({ onEdit }) => {
+const LoteTable = ({ onEdit, lotes, setLotes }) => {
   const [API_BASE, setApiBase] = useState(null);
 
-  const [lotes, setLotes] = useState([]);
+  // const [lotes, setLotes] = useState([]);
   const [carregando, setCarregando] = useState(false);
   const [ultimoDoc, setUltimoDoc] = useState(null);
   const [temMais, setTemMais] = useState(true);
@@ -182,11 +182,17 @@ const LoteTable = ({ onEdit }) => {
     try {
       const res = await fetch(`${API_BASE}/configuracoes-cotacao`);
       const data = await res.json();
+
+      const valoresCotacao =
+        data.tipoDefinicao === 'percentuais'
+          ? data.valoresPercentuais
+          : data.valoresManuais;
+
       setConfiguracoes({
-        ouro750: Number(data.valoresFixos.ouro750),
-        ouroBaixo: Number(data.valoresFixos.ouroBaixo),
-        pecaComDiamante: Number(data.valoresFixos.pecaComDiamante),
-        ouro1000: Number(data.cotacaoManual),
+        ouro750: Number(valoresCotacao.ouro750 || 0),
+        ouroBaixo: Number(valoresCotacao.ouroBaixo || 0),
+        pecaComDiamante: Number(valoresCotacao.pecaComDiamante || 0),
+        ouro1000: Number(data.cotacaoManual || 0),
       });
     } catch (error) {
       console.error('Erro ao buscar configurações:', error);
