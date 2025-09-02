@@ -249,4 +249,28 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// GET /lotes/buscar?
+
+router.get('/buscar', async (req, res) => {
+  try {
+    const termo = String(req.query.termo || '').replace(/\D/g, '');
+    if (!termo) return res.json({ sucesso: true, lotes: [] });
+
+    // Pega todos os lotes (cuidado: pode ser pesado se houver muitos!)
+    const snap = await db.collection('lotes').get();
+
+    const lotes = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((l) => {
+        const normalizado = String(l.numeroLote || '').replace(/\D/g, '');
+        return normalizado.includes(termo);
+      });
+
+    res.json({ sucesso: true, lotes });
+  } catch (err) {
+    console.error('Erro ao buscar lotes:', err);
+    res.status(500).json({ sucesso: false, erro: err.message });
+  }
+});
+
 export default router;

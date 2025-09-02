@@ -61,7 +61,6 @@ const filtrarPorBusca = (lista, termo) => {
 
 /* -------- Detecta automaticamente qual API usar -------- */
 const detectApiBase = async () => {
-  // 🔹 Se estiver rodando no localhost:5173 (dev), tenta o backend local
   if (window.location.hostname === 'localhost') {
     try {
       const res = await fetch('http://localhost:3001/api/health');
@@ -73,8 +72,6 @@ const detectApiBase = async () => {
       console.warn('⚠️ API local não respondeu, caindo para Render...');
     }
   }
-
-  // 🔹 Default: Render
   console.log('🟣 Usando API do Render');
   return 'https://leilao-ouro.onrender.com/api';
 };
@@ -82,7 +79,6 @@ const detectApiBase = async () => {
 const LoteTable = ({ onEdit, lotes, setLotes }) => {
   const [API_BASE, setApiBase] = useState(null);
 
-  // const [lotes, setLotes] = useState([]);
   const [carregando, setCarregando] = useState(false);
   const [ultimoDoc, setUltimoDoc] = useState(null);
   const [temMais, setTemMais] = useState(true);
@@ -92,12 +88,52 @@ const LoteTable = ({ onEdit, lotes, setLotes }) => {
   const [cotacoesSelecionadas, setCotacoesSelecionadas] = useState({});
   const [lotesVantajosos, setLotesVantajosos] = useState([]);
 
-  // total de lotes no banco (para o rótulo “Excluir todos (X)”)
   const [totalLotes, setTotalLotes] = useState(0);
 
   // ------- BUSCA -------
   const [termoBusca, setTermoBusca] = useState('');
-  const lotesExibidos = termoBusca ? filtrarPorBusca(lotes, termoBusca) : lotes;
+  const [resultadosBusca, setResultadosBusca] = useState([]);
+  const [buscando, setBuscando] = useState(false);
+
+  useEffect(() => {
+    if (!API_BASE) return;
+
+    const buscar = async () => {
+      if (!termoBusca.trim()) {
+        setResultadosBusca([]);
+        return;
+      }
+
+      setBuscando(true);
+      try {
+        const res = await fetch(
+          `${API_BASE}/lotes/buscar?termo=${encodeURIComponent(termoBusca)}`
+        );
+        const data = await res.json();
+
+        if (data?.sucesso) {
+          setResultadosBusca(data.lotes || []);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar lotes:', err);
+      } finally {
+        setBuscando(false);
+      }
+    };
+
+    const timer = setTimeout(buscar, 500);
+    return () => clearTimeout(timer);
+  }, [termoBusca, API_BASE]);
+
+  // --- Combina resultados locais + backend ---
+  const lotesExibidos = termoBusca
+    ? [
+        ...(resultadosBusca || []),
+        ...filtrarPorBusca(lotes, termoBusca),
+      ].filter(
+        (l, index, self) => index === self.findIndex((x) => x.id === l.id)
+      )
+    : lotes;
 
   useEffect(() => {
     (async () => {
@@ -110,7 +146,7 @@ const LoteTable = ({ onEdit, lotes, setLotes }) => {
     if (API_BASE) {
       carregarPrimeiraPagina();
       fetchConfiguracoes();
-      atualizarTotalLotes(); // pega a contagem total do banco
+      atualizarTotalLotes();
     }
   }, [API_BASE]);
 
@@ -120,7 +156,6 @@ const LoteTable = ({ onEdit, lotes, setLotes }) => {
       const data = await r.json();
 
       if (data?.sucesso) {
-        // preferir o campo total, senão cair no length
         const total = Number(
           data.total ?? (Array.isArray(data.lotes) ? data.lotes.length : 0)
         );
@@ -245,7 +280,6 @@ const LoteTable = ({ onEdit, lotes, setLotes }) => {
     }
   };
 
-  // NOVO: excluir TODOS os lotes do banco
   const deletarTodosLotes = async () => {
     if (
       !window.confirm(
@@ -267,8 +301,6 @@ const LoteTable = ({ onEdit, lotes, setLotes }) => {
 
       if (data?.sucesso) {
         alert(`✅ ${data.excluidos ?? 0} lote(s) foram excluídos!`);
-
-        // Recarrega estado a partir do servidor (garante persistência)
         await atualizarTotalLotes();
         setLotes([]);
         setSelecionados([]);
@@ -395,9 +427,22 @@ const LoteTable = ({ onEdit, lotes, setLotes }) => {
             }}
           />
           {termoBusca && (
-            <button onClick={() => setTermoBusca('')}>Limpar</button>
+            <button
+              style={{
+                padding: '8px 10px',
+                borderRadius: 4,
+                border: '1px solid #ccc',
+                background: '#f0f0f0',
+                width: 80,
+              }}
+              onClick={() => setTermoBusca('')}
+            >
+              Limpar
+            </button>
           )}
         </div>
+
+        {buscando && <p>🔎 Buscando...</p>}
       </div>
 
       {lotesExibidos.length === 0 && !carregando && (
@@ -470,7 +515,6 @@ const LoteTable = ({ onEdit, lotes, setLotes }) => {
             🗑️ Excluir Selecionados ({selecionados.length})
           </button>
 
-          {/* NOVO botão: excluir TODOS os lotes do banco */}
           <button
             onClick={deletarTodosLotes}
             className={styles.confirmDelete}
